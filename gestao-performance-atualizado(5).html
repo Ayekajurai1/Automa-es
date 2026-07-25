@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chronos — Gestão de Performance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --bg:#F2F5FB;
+    --surface:#F8FBFF;
+    --surface-soft:#EDF4FF;
+    --ink:#0F2748;
+    --muted:#4F657F;
+    --muted-2:#7A8FA8;
+    --accent:#0F3B72;
+    --accent-dark:#0B3C7D;
+    --accent-soft:#E8EFF9;
+    --warn:#3B5E8A;
+    --warn-soft:#DCE6F4;
+    --line:#D6E0EE;
+    --core:#0F3B72;
+    --admin:#3B5E8A;
+    --other:#5A75A8;
+    --other-soft:#E7EAF5;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(15,39,72,0.06), 0 8px 24px -12px rgba(15,39,72,0.14);
+  }
+  html[data-theme="dark"]{
+    --bg:linear-gradient(180deg,#061b36 0%,#102d5b 45%,#0e2a53 100%);
+    --surface:rgba(12,34,63,0.92);
+    --surface-soft:rgba(255,255,255,0.06);
+    --ink:#F4F8FF;
+    --muted:#B6C6E0;
+    --muted-2:#96AFC6;
+    --accent:#95BCFF;
+    --accent-dark:#7FB4FF;
+    --accent-soft:rgba(149,188,255,0.14);
+    --warn:#F3D47D;
+    --warn-soft:rgba(243,212,125,0.16);
+    --line:rgba(255,255,255,0.12);
+    --core:#95BCFF;
+    --admin:#8AAAFF;
+    --other:#A3B8D8;
+    --other-soft:rgba(163,184,216,0.12);
+    --shadow:0 1px 2px rgba(3,19,42,0.12), 0 8px 24px -12px rgba(3,19,42,0.24);
+  }
+  body[data-theme="dark"]{
+    background:var(--bg);
+  }
+  .card{
+    background:var(--surface);
+  }
+  .top,
+  .form-grid input,
+  .form-grid select,
+  .btn,
+  .chart-wrap,
+  textarea,
+  table,
+  .ledger-row,
+  .empty,
+  .toast{
+    color:var(--ink);
+  }
+  .dark-text{
+    color:var(--ink);
+  }
+  .theme-toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:44px;
+    height:44px;
+    border-radius:14px;
+    border:1px solid rgba(15,39,72,0.12);
+    background:var(--surface);
+    color:var(--accent);
+    cursor:pointer;
+    transition:transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease;
+  }
+  .theme-toggle:hover{
+    transform:scale(1.02);
+  }
+  .theme-toggle svg{
+    width:20px;
+    height:20px;
+    display:block;
+  }
+  html[data-theme="dark"] .theme-toggle{
+    background:rgba(255,255,255,0.08);
+    border-color:rgba(255,255,255,0.18);
+    color:#FFEBA7;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .hidden{display:none !important;}
+  .login-screen{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    padding:24px;background:rgba(15,39,72,0.16);backdrop-filter:blur(6px);z-index:200;
+  }
+  html[data-theme="dark"] .login-screen{background:rgba(1,12,29,0.72);}
+  .login-card{
+    width:min(560px,100%);background:var(--surface);border:1px solid var(--line);
+    border-radius:22px;padding:32px;box-shadow:var(--shadow);max-width:520px;
+  }
+  .login-card h1{font-size:32px;margin:0 0 12px;color:var(--ink);}
+  .login-card p{margin:0 0 24px;color:var(--muted);}
+  .login-form{display:grid;gap:14px;}
+  .login-form input{width:100%;}
+  .login-actions{text-align:right;margin-top:6px;}
+  .login-error{display:none;color:var(--warn);font-size:13px;margin-top:4px;}
+  .login-footer{margin-top:18px;font-size:12px;color:var(--muted-2);line-height:1.5;}
+  .login-nav{display:flex;gap:10px;margin-bottom:22px;}
+  .login-nav .login-tab{flex:1;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft);color:var(--ink);cursor:pointer;font-weight:600;transition:background .2s,color .2s,border-color .2s;}
+  .login-nav .login-tab.active{background:var(--accent);color:#fff;border-color:transparent;}
+  html[data-theme="dark"] .login-nav .login-tab{background:rgba(255,255,255,0.08);}
+  html[data-theme="dark"] .login-nav .login-tab.active{background:var(--accent);color:#08264a;}
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 64px;}
+
+  /* Header */
+  header.top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:20px;
+    padding-bottom:20px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:6px;
+  }
+  .brand-header{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+  }
+  .brand-logo{
+    display:flex;
+    align-items:center;
+    gap:14px;
+  }
+  .brand-copy{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .brand-logo svg{
+    width:48px;
+    height:48px;
+    flex-shrink:0;
+  }
+  .brand-controls{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .user-badge{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:2px;
+    font-size:12px;
+    color:var(--muted);
+    text-align:right;
+  }
+  .user-badge strong{
+    color:var(--ink);
+    font-size:13px;
+    font-weight:700;
+  }
+  .logo-fpftech{
+    width:120px;
+    max-width:100%;
+    height:auto;
+    object-fit:contain;
+  }
+  .brand-logo svg .logo-background{fill:var(--accent);opacity:0.16;}
+  .brand-logo svg .logo-hand{stroke:var(--accent);}
+  .brand-logo svg .logo-center{fill:var(--accent);}
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:0;
+  }
+  .brand-copy h1{
+    font-family:'Fraunces',serif;
+    font-weight:700;
+    font-size:32px;
+    margin:0;
+    letter-spacing:-0.01em;
+    color:var(--ink);
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:32px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  .top p{margin:6px 0 0;color:var(--muted);font-size:13.5px;max-width:520px;}
+  .period-box{
+    font-family:'IBM Plex Mono',monospace;
+    text-align:right;
+    color:var(--muted);
+    font-size:12px;
+  }
+  .period-box strong{display:block;color:var(--ink);font-size:14px;font-weight:600;}
+
+  /* Tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:24px;}
+  .tab-btn{
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--muted);
+    background:transparent;
+    border:none;
+    padding:10px 4px;
+    margin-right:22px;
+    cursor:pointer;
+    position:relative;
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn.active{color:var(--ink);border-bottom:2px solid var(--accent);}
+  .tab-btn:hover{color:var(--ink);}
+
+  .view{display:none;}
+  .view.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Cards */
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    box-shadow:var(--shadow);
+  }
+  .card + .card{margin-top:16px;}
+  .card h2{
+    font-family:'Fraunces',serif;
+    font-size:17px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .card .sub{color:var(--muted);font-size:12.5px;margin:0 0 16px;}
+
+  /* Form */
+  .form-grid{
+    display:grid;
+    grid-template-columns:1.3fr 1fr 1.3fr 1fr 0.7fr auto;
+    gap:12px;
+    align-items:end;
+  }
+  @media (max-width:900px){.form-grid{grid-template-columns:1fr 1fr;}}
+  label{
+    display:block;
+    font-size:11px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  input, select, textarea{
+    width:100%;
+    font-family:'Inter',sans-serif;
+    font-size:13.5px;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:7px;
+    background:var(--surface-soft);
+    color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus, button:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    padding:10px 16px;
+    border-radius:7px;
+    border:none;
+    cursor:pointer;
+    background:var(--accent);
+    color:#fff;
+    white-space:nowrap;
+  }
+  .btn:hover{background:var(--accent-dark);}
+  .btn.ghost{
+    background:transparent;
+    color:var(--muted);
+    border:1px solid var(--line);
+  }
+  .btn.ghost:hover{color:var(--ink);border-color:var(--muted-2);}
+  .btn.danger{background:transparent;color:var(--warn);padding:6px 8px;font-size:12px;}
+  .btn.danger:hover{background:var(--warn-soft);}
+  .btn.small{padding:7px 12px;font-size:12.5px;}
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;margin-top:4px;}
+  thead th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--muted);
+    font-weight:600;
+    padding:8px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  tbody tr:hover{background:var(--surface-soft);}
+  tbody tr:hover td{color:var(--ink);}
+  .inline-edit-select, .inline-edit-details{
+    min-width:150px;
+    font-size:12.5px;
+    padding:7px 8px;
+    background:var(--surface);
+  }
+  .inline-edit-details{
+    width:240px;
+    min-height:58px;
+    resize:vertical;
+    font-family:'Inter',sans-serif;
+    border:1px solid var(--line);
+    border-radius:7px;
+    color:var(--ink);
+  }
+  .entry-actions{display:flex;gap:6px;align-items:center;}
+  .tag{
+    display:inline-block;
+    padding:2px 8px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:600;
+  }
+  .tag.core{background:var(--accent-soft);color:var(--accent);}
+  .tag.admin{background:var(--warn-soft);color:var(--warn);}
+  .tag.other{background:var(--other-soft);color:var(--other);}
+  .empty{color:var(--muted-2);text-align:center;padding:30px 10px;font-size:13px;}
+
+  /* KPI row */
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+  @media (max-width:900px){.kpi-row{grid-template-columns:1fr 1fr;}}
+  .kpi{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 18px;
+    box-shadow:var(--shadow);
+  }
+  .kpi .lbl{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);font-weight:600;}
+  .kpi .val{font-family:'Fraunces',serif;font-size:26px;font-weight:600;margin-top:4px;}
+  .kpi .delta{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+  /* Ledger strip (signature element) */
+  .ledger{display:flex;flex-direction:column;gap:8px;}
+  .ledger-row{display:grid;grid-template-columns:120px 1fr;align-items:center;gap:12px;}
+  .ledger-label{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--muted);text-align:right;}
+  .ledger-track{display:flex;height:20px;border-radius:5px;overflow:hidden;background:var(--surface-soft);}
+  .ledger-seg{height:100%;transition:width .3s;}
+  .legend{display:flex;gap:18px;margin-top:14px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+  .legend-dot{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+  .grid-2{display:grid;grid-template-columns:1.1fr 0.9fr;gap:16px;}
+  @media (max-width:900px){.grid-2{grid-template-columns:1fr;}}
+  .chart-wrap{position:relative;height:320px;min-height:280px;}
+  .chart-wrap.tall{height:360px;}
+  canvas{width:100% !important;height:100% !important;max-height:none;}
+  .chart-empty{height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:13px;text-align:center;padding:20px;}
+
+  .activity-list{display:flex;flex-direction:column;gap:8px;}
+  .activity-item{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:9px 12px;border:1px solid var(--line);border-radius:7px;background:var(--surface-soft);
+  }
+  .activity-item .name{font-weight:600;font-size:13px;}
+  .activity-item .meta{display:flex;align-items:center;gap:10px;}
+
+  .toast{
+    position:fixed;bottom:20px;right:20px;
+    background:var(--ink);color:#fff;
+    padding:10px 16px;border-radius:8px;font-size:13px;
+    box-shadow:var(--shadow);
+    opacity:0;transform:translateY(8px);
+    transition:all .25s;pointer-events:none;
+    font-family:'Inter',sans-serif;
+    z-index:50;
+  }
+  html[data-theme="dark"] .toast{
+    background:rgba(255,255,255,0.12);
+    color:var(--ink);
+    border:1px solid rgba(255,255,255,0.18);
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .footer-note{margin-top:28px;color:var(--muted-2);font-size:11.5px;text-align:center;}
+  .loading{color:var(--muted);font-size:13px;padding:20px 0;}
+
+  .dash-toolbar{
+    display:flex;align-items:flex-end;gap:12px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow);
+    flex-wrap:wrap;
+  }
+  .dash-toolbar .btn{margin-bottom:1px;}
+  #btnExportPdf{background:var(--ink);}
+  #btnExportPdf:hover{background:#0B141B;}
+  #btnExportPdf:disabled{background:var(--muted-2);cursor:progress;}
+
+  /* Timer */
+  .timer-card{border-color:var(--accent);position:relative;}
+  .timer-card::before{
+    content:'';position:absolute;top:0;left:0;bottom:0;width:3px;
+    background:var(--accent);border-radius:var(--radius) 0 0 var(--radius);
+  }
+  .timer-body{
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:16px;
+    padding:14px 4px 18px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:16px;
+  }
+  .timer-display{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:40px;
+    font-weight:600;
+    letter-spacing:0.02em;
+    color:var(--ink);
+    font-variant-numeric:tabular-nums;
+  }
+  .timer-display.running{color:var(--accent);}
+  .timer-controls{display:flex;gap:8px;}
+  .btn.danger-outline{
+    background:transparent;color:var(--warn);border:1px solid rgba(243,212,125,0.35);
+  }
+  .btn.danger-outline:hover{background:var(--warn-soft);}
+  .btn:disabled, .btn.ghost:disabled, .btn.danger-outline:disabled{
+    opacity:0.45;cursor:not-allowed;
+  }
+  .timer-fields{grid-template-columns:1fr 1fr 1fr 1fr auto;}
+  .details-row{margin-top:12px;}
+  textarea{min-height:76px;resize:vertical;}
+  .time-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:4px 8px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-variant-numeric:tabular-nums;}
+  .section-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:900px){.section-grid{grid-template-columns:1fr;}}
+  @media (max-width:900px){.timer-fields{grid-template-columns:1fr 1fr;}}
+  .timer-hint{
+    font-size:12px;color:var(--muted-2);margin:10px 2px 0;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+</style>
+</head>
+<body>
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="brand-header" style="align-items:flex-start;gap:14px;margin-bottom:18px;">
+      <div class="brand-logo">
+        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false" style="width:42px;height:42px;">
+          <circle class="logo-background" cx="24" cy="24" r="20"/>
+          <path class="logo-hand" d="M24 12v12l9 5" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle class="logo-center" cx="24" cy="24" r="4"/>
+        </svg>
+      </div>
+      <div class="brand-copy" style="gap:2px;">
+        <div class="brand-eyebrow">Chronos • Acesso</div>
+        <h1 id="loginTitle">Faça login para continuar</h1>
+      </div>
+    </div>
+    <div class="login-nav" role="tablist">
+      <button class="login-tab active" type="button" data-login-mode="login">Entrar</button>
+      <button class="login-tab" type="button" data-login-mode="register">Cadastrar</button>
+    </div>
+    <p id="loginSubtitle">Informe usuário e senha para acessar o painel de apontamentos e dashboard.</p>
+    <div class="login-form login-mode login-mode-login">
+      <div>
+        <label for="login-user">Usuário</label>
+        <input id="login-user" type="text" placeholder="Seu nome ou e-mail" autocomplete="username">
+      </div>
+      <div>
+        <label for="login-pass">Senha</label>
+        <input id="login-pass" type="password" placeholder="Senha" autocomplete="current-password">
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <div class="login-actions">
+        <button class="btn" id="btnLogin" type="button">Entrar</button>
+      </div>
+      <div class="login-footer">A senha é verificada localmente e seus dados ficam salvos apenas neste navegador.</div>
+    </div>
+    <div class="login-form hidden login-mode login-mode-register">
+      <div>
+        <label for="register-user">Usuário</label>
+        <input id="register-user" type="text" placeholder="Escolha um nome" autocomplete="username">
+      </div>
+      <div>
+        <label for="register-pass">Senha</label>
+        <input id="register-pass" type="password" placeholder="Senha" autocomplete="new-password">
+      </div>
+      <div>
+        <label for="register-pass-confirm">Confirme a senha</label>
+        <input id="register-pass-confirm" type="password" placeholder="Repita a senha" autocomplete="new-password">
+      </div>
+      <div class="login-error" id="registerError"></div>
+      <div class="login-actions">
+        <button class="btn" id="btnRegister" type="button">Cadastrar</button>
+      </div>
+      <div class="login-footer">Ao cadastrar, você poderá entrar com este usuário no próximo acesso. Seus dados continuam apenas neste navegador.</div>
+    </div>
+  </div>
+</div>
+<div class="wrap hidden">
+
+  <header class="top">
+    <div class="brand-header">
+      <div class="brand-logo">
+        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+          <circle class="logo-background" cx="24" cy="24" r="20"/>
+          <path class="logo-hand" d="M24 12v12l9 5" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle class="logo-center" cx="24" cy="24" r="4"/>
+        </svg>
+        <div class="brand-copy">
+          <div class="brand-eyebrow">Chronos · Gestão de Performance</div>
+          <h1>Apontamento &amp; Indicadores</h1>
+        </div>
+      </div>
+      <div class="brand-controls">
+        <div class="user-badge hidden" id="userBadge">
+          <span class="user-label">Logado como</span>
+          <strong id="userName">Usuário</strong>
+        </div>
+        <button class="btn ghost" id="btnLogout" type="button" style="display:none;">Sair</button>
+        <button class="theme-toggle" id="btnThemeToggle" type="button" aria-label="Alternar modo claro/escuro">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <circle cx="12" cy="12" r="5" fill="currentColor" opacity="0.92"/>
+            <g stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="1" x2="12" y2="4"/>
+              <line x1="12" y1="20" x2="12" y2="23"/>
+              <line x1="1" y1="12" x2="4" y2="12"/>
+              <line x1="20" y1="12" x2="23" y2="12"/>
+              <line x1="4.9" y1="4.9" x2="7.3" y2="7.3"/>
+              <line x1="16.7" y1="16.7" x2="19.1" y2="19.1"/>
+              <line x1="4.9" y1="19.1" x2="7.3" y2="16.7"/>
+              <line x1="16.7" y1="7.3" x2="19.1" y2="4.9"/>
+            </g>
+          </svg>
+        </button>
+      </div>
+      <p>Registro de horas por atividade e visão consolidada de performance da equipe — inspirado na lógica de timesheet do Legaldesk (TOTVS).</p>
+    </div>
+    <div class="period-box">
+      <strong id="todayLabel">—</strong>
+      total apontado
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-view="apontamento">Apontamento</button>
+    <button class="tab-btn" data-view="atividades">Atividades</button>
+    <button class="tab-btn" data-view="cadastros" id="tabCadastros">Cadastros</button>
+    <button class="tab-btn" data-view="dashboard">Dashboard</button>
+  </div>
+
+  <!-- APONTAMENTO -->
+  <div class="view active" id="view-apontamento">
+    <div class="card timer-card">
+      <h2>Cronômetro de atividade</h2>
+      <p class="sub">Inicie ao começar uma atividade e finalize para lançar o tempo automaticamente.</p>
+      <div class="timer-body">
+        <div class="timer-display" id="timerDisplay">00:00:00</div>
+        <div class="timer-controls">
+          <button class="btn" id="btnTimerStart">Iniciar</button>
+          <button class="btn ghost" id="btnTimerPause" disabled>Pausar</button>
+          <button class="btn danger-outline" id="btnTimerReset" disabled>Descartar</button>
+          <button class="btn ghost" id="btnTimerNew" type="button">Novo cronômetro</button>
+        </div>
+      </div>
+      <div class="timer-list" id="timerList"></div>
+      <div class="form-grid timer-fields">
+        <div>
+          <label for="t-colab">Colaborador</label>
+          <input id="t-colab" type="text" list="colabList" placeholder="Nome do colaborador">
+        </div>
+        <div>
+          <label for="t-ativ">Atividade</label>
+          <input id="t-ativ" type="text" list="ativList" placeholder="Digite para buscar atividade">
+        </div>
+        <div>
+          <label for="t-cost">Centro de custo</label>
+          <input id="t-cost" type="text" list="costCenterList" placeholder="Digite para buscar centro de custo">
+        </div>
+        <button class="btn" id="btnTimerFinish" disabled>Finalizar e lançar</button>
+      </div>
+      <div class="details-row">
+        <label for="t-details">Detalhamento da atividade</label>
+        <textarea id="t-details" placeholder="Descreva o que foi executado durante esta atividade"></textarea>
+      </div>
+      <p class="timer-hint" id="timerHint"></p>
+    </div>
+
+    <div class="card">
+      <h2>Novo apontamento</h2>
+      <p class="sub">Registre o tempo dedicado a cada atividade, como no lançamento de horas do timesheet.</p>
+      <div class="form-grid">
+        <div>
+          <label for="f-colab">Colaborador</label>
+          <input id="f-colab" type="text" list="colabList" placeholder="Digite para buscar colaborador">
+        </div>
+        <div>
+          <label for="f-data">Data</label>
+          <input id="f-data" type="date">
+        </div>
+        <div>
+          <label for="f-ativ">Atividade</label>
+          <input id="f-ativ" type="text" list="ativList" placeholder="Digite para buscar atividade">
+        </div>
+        <div>
+          <label for="f-cost">Centro de custo</label>
+          <input id="f-cost" type="text" list="costCenterList" placeholder="Digite para buscar centro de custo">
+        </div>
+        <div>
+          <label for="f-horas">Horas (HH:MM)</label>
+          <input id="f-horas" type="text" inputmode="numeric" placeholder="Ex: 01:30">
+        </div>
+        <button class="btn" id="btnAdd">Lançar</button>
+      </div>
+      <div class="details-row">
+        <label for="f-details">Detalhamento da atividade</label>
+        <textarea id="f-details" placeholder="Descreva o que foi realizado"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Lançamentos recentes</h2>
+      <p class="sub" id="entryCount">Carregando...</p>
+      <table>
+        <thead>
+          <tr><th>Data</th><th>Colaborador</th><th>Atividade</th><th>Centro de custo</th><th>Detalhamento</th><th>Tempo</th><th></th></tr>
+        </thead>
+        <tbody id="entryTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ATIVIDADES -->
+  <div class="view" id="view-atividades">
+    <div class="card">
+      <h2>Mapeamento de atividades</h2>
+      <p class="sub">Classifique cada atividade como <strong>Core</strong> (entrega finalística) ou <strong>Administrativa</strong> — isso alimenta o indicador de produtividade no dashboard.</p>
+      <div class="form-grid" style="grid-template-columns:2fr 1fr 1fr auto;">
+        <div>
+          <label for="a-nome">Nome da atividade</label>
+          <input id="a-nome" type="text" placeholder="Ex: Análise de Prestação de Contas">
+        </div>
+        <div>
+          <label for="a-tipo">Tipo</label>
+          <select id="a-tipo">
+            <option value="core">Core</option>
+            <option value="admin">Administrativa</option>
+            <option value="other">Outro</option>
+          </select>
+        </div>
+        <div></div>
+        <button class="btn" id="btnAddAtividade">Adicionar</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Atividades cadastradas</h2>
+      <div class="activity-list" id="activityList"></div>
+    </div>
+  </div>
+
+  <!-- CADASTROS -->
+  <div class="view" id="view-cadastros">
+    <div class="section-grid">
+      <div>
+        <div class="card">
+          <h2>Colaboradores</h2>
+          <p class="sub">Cadastre colaboradores para sugerir o nome ao lançar horas.</p>
+          <div class="form-grid" style="grid-template-columns:1fr auto;">
+            <div><label for="colab-nome">Colaborador</label><input id="colab-nome" type="text" placeholder="Ex: Maria Silva"></div>
+            <button class="btn" id="btnAddColab">Adicionar</button>
+          </div>
+        </div>
+        <div class="card"><div class="activity-list" id="collabList"></div></div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Centros de custo</h2>
+          <p class="sub">Cadastre os centros de custo disponíveis para os apontamentos.</p>
+          <div class="form-grid" style="grid-template-columns:1fr auto;">
+            <div><label for="cc-nome">Centro de custo</label><input id="cc-nome" type="text" placeholder="Ex: 2007 - Administração"></div>
+            <button class="btn" id="btnAddCost">Adicionar</button>
+          </div>
+        </div>
+        <div class="card"><div class="activity-list" id="costList"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="view" id="view-dashboard">
+    <div class="dash-toolbar">
+      <div class="form-grid" style="grid-template-columns:repeat(4, minmax(0, 1fr)); gap:14px; flex:1;">
+        <div>
+          <label for="dash-colab">Colaborador</label>
+          <select id="dash-colab">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div>
+          <label for="dash-ativ">Atividade</label>
+          <select id="dash-ativ">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div>
+          <label for="dash-cost">Centro de custo</label>
+          <select id="dash-cost">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div>
+          <label for="rep-de">Período — de</label>
+          <input id="rep-de" type="date">
+        </div>
+        <div>
+          <label for="rep-ate">até</label>
+          <input id="rep-ate" type="date">
+        </div>
+        <button class="btn ghost small" id="btnApplyFilter">Aplicar filtro</button>
+        <button class="btn ghost small" id="btnLimparPeriodo">Limpar filtro</button>
+        <button class="btn small" id="btnExportPdf">Exportar relatório em PDF</button>
+      </div>
+    </div>
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="card">
+      <h2>Distribuição de tempo por atividade</h2>
+      <p class="sub">Faixa de horas acumuladas — quanto mais larga, maior a dedicação de tempo.</p>
+      <div class="ledger" id="ledgerChart"></div>
+      <div class="legend" id="ledgerLegend"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>Horas por colaborador</h2>
+        <div class="chart-wrap"><canvas id="chartColab"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>Core vs. Administrativo</h2>
+        <div class="chart-wrap"><canvas id="chartTipo"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Evolução semanal de horas apontadas</h2>
+      <div class="chart-wrap tall"><canvas id="chartEvolucao"></canvas></div>
+    </div>
+  </div>
+
+  <div class="footer-note">Os dados ficam salvos localmente neste navegador (localStorage).</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<datalist id="colabList"></datalist>
+<datalist id="ativList"></datalist>
+<datalist id="costCenterList"></datalist>
+
+<script>
+(function(){
+  const DEFAULT_ACTIVITIES = [
+    {id:'a1', name:'Análise de Prestação de Contas', type:'core'},
+    {id:'a2', name:'Elaboração de Relatório Financeiro', type:'core'},
+    {id:'a3', name:'Organização de Benefícios', type:'core'},
+    {id:'a4', name:'Suporte a Auditoria', type:'core'},
+    {id:'a5', name:'Reunião', type:'admin'},
+    {id:'a6', name:'E-mail / Comunicação', type:'admin'},
+    {id:'a7', name:'Tarefas administrativas', type:'admin'},
+  ];
+
+
+  const DEFAULT_COST_CENTERS = [{"id":"cc-2007","name":"2007 - ADMINISTRACAO"},{"id":"cc-2012","name":"2012 - PROVITA"},{"id":"cc-2025","name":"2025 - BITLABS"},{"id":"cc-2027","name":"2027 - EDITAIS"},{"id":"cc-2030","name":"2030 - POOL - PNE"},{"id":"cc-2036","name":"2036 - EQUIPE DE T.I."},{"id":"cc-2040","name":"2040 - COORDENADORES"},{"id":"cc-2041","name":"2041 - LICENÇA NÃO REMUNERADA"},{"id":"cc-2044","name":"2044 - SGQ - SISTEMA DE GESTÃO DA QUALIDADE"},{"id":"cc-2051","name":"2051 - COMUNICAÇÃO"},{"id":"cc-2052","name":"2052 - NOVOS NEGOCIOS"},{"id":"cc-2055","name":"2055 - CUSTOS PROJETOS - INC"},{"id":"cc-2056","name":"2056 - EQUIPE RESERVA - POOL PROJETOS"},{"id":"cc-2058","name":"2058 - CUSTOS DE PROJETOS CM"},{"id":"cc-2059","name":"2059 - CUSTO FIXO - PROJETOS CM"},{"id":"cc-2063","name":"2063 - Comercial"},{"id":"cc-2065","name":"2065 - Serviços de Hardware"},{"id":"cc-2069","name":"2069 - Rescisão FPF"},{"id":"cc-2070","name":"2070 - Estagiário"},{"id":"cc-2072","name":"2072 - Técnicos Engenharia"},{"id":"cc-2076","name":"2076 - WIT"},{"id":"cc-2077","name":"2077 - SGP - DD&L"},{"id":"cc-2078","name":"2078 - SERVIÇO ESD"},{"id":"cc-2079","name":"2079 - Projeto Amapá"},{"id":"cc-2081","name":"2081 - Biorreator - EVA Scientific"},{"id":"cc-2082","name":"2082 - JURÍDICO"},{"id":"cc-2083","name":"2083 - RH"},{"id":"cc-2084","name":"2084 - P&D CONTRATOS"},{"id":"cc-2085","name":"2085 - CONTROLADORIA"},{"id":"cc-2505","name":"2505 - MODULOS TERMINAIS AUTO BANCARIOS (TIME FIXO)"},{"id":"cc-2526","name":"2526 - SERVIÇO DE DESENVOLVIMENTO DE SOFTWARE"},{"id":"cc-2527","name":"2527 - Simulador Inteligente de HW  (Jiga 2.0)"},{"id":"cc-2529","name":"2529 - Adm Redes e Suporte TI"},{"id":"cc-4711","name":"4711 - P-PLAN"},{"id":"cc-4713","name":"4713 - Cobertura de Testes (Teste Coverage)"},{"id":"cc-4714","name":"4714 - PLANMAT - PLANEJAMENTO DE MATERIAIS"},{"id":"cc-4715","name":"4715 - NRE CONTROL"},{"id":"cc-4716","name":"4716 - DERMAVISION AI"},{"id":"cc-4717","name":"4717 - NCIA"},{"id":"cc-4718","name":"4718 - PERFORMANCE HUB"},{"id":"cc-4814","name":"4814 - Serviço Programação Robô"},{"id":"cc-4815","name":"4815 - Sistema de Pega de Ganchos"},{"id":"cc-4816","name":"4816 - Capacitação de Robótica - Fanuc"},{"id":"cc-4817","name":"4817 - FUSO DE PUCKS"},{"id":"cc-4818","name":"4818 - Serviço Linha Jupiter – Robôs Scara e Cartesiano"},{"id":"cc-4819","name":"4819 - Serviço Usinagem de Peças Taleira Relumac I e II"},{"id":"cc-5011","name":"5011 - VOLCANO"},{"id":"cc-5012","name":"5012 - Phenomenon"},{"id":"cc-5013","name":"5013 - Lego"},{"id":"cc-5014","name":"5014 - Multiplex Tuners"},{"id":"cc-5015","name":"5015 - MATRIX"},{"id":"cc-5016","name":"5016 - Thundera (Charger Station)"},{"id":"cc-5017","name":"5017 - The Beholder"},{"id":"cc-5018","name":"5018 - Jasper Hale"},{"id":"cc-5019","name":"5019 - A QUIET PLACE"},{"id":"cc-5410","name":"5410 - TIME FIXO - 3M"},{"id":"cc-5424","name":"5424 - Reciclagem PVC"},{"id":"cc-5425","name":"5425 - Automatização de Respiradores"},{"id":"cc-5426","name":"5426 - Programação do Robô Injetora"},{"id":"cc-5427","name":"5427 - Programação do Robô 2 da Injetora 7"},{"id":"cc-5428","name":"5428 - Impressão em Manufatura Aditiva"},{"id":"cc-5429","name":"5429 - Alimentador Automático da Moega"},{"id":"cc-5430","name":"5430 - Manutenções Inteligentes para Prevenção e predição na indústria 4.0"},{"id":"cc-6946","name":"6946 - CHATDL"},{"id":"cc-6948","name":"6948 - CALL HOME"},{"id":"cc-6949","name":"6949 - SIGO – Sistema Inteligente de Gestão Otimizada"},{"id":"cc-6950","name":"6950 - Smart HaaS AI"},{"id":"cc-6951","name":"6951 - SELLER"},{"id":"cc-6952","name":"6952 - Speed Mind AI"},{"id":"cc-6953","name":"6953 - Serviço de Implantação do Projeto Zion em Manaus"},{"id":"cc-6954","name":"6954 - Hubble"},{"id":"cc-6955","name":"6955 - Smart Dest"},{"id":"cc-6956","name":"6956 - Control Center"},{"id":"cc-6957","name":"6957 - ATLAS"},{"id":"cc-6958","name":"6958 - Smart Health"},{"id":"cc-6959","name":"6959 - ASSETFLOW"},{"id":"cc-6960","name":"6960 - + Inteligente"},{"id":"cc-7728","name":"7728 - SMART CLEANER"},{"id":"cc-7729","name":"7729 - OpeFinance"},{"id":"cc-7730","name":"7730 - Smart Manager 4.0"},{"id":"cc-8316","name":"8316 - SAIPH"},{"id":"cc-8317","name":"8317 - NETSPHER"},{"id":"cc-8318","name":"8318 - Alfa Centauri"},{"id":"cc-9007","name":"9007 - ECOGRID POWERHUB"},{"id":"cc-9107","name":"9107 - Crimping Machine"},{"id":"cc-9601","name":"9601 - MANUTENCAO SISTEMA ANOREG"},{"id":"cc-9605","name":"9605 - Suporte Plataforma Selo Eletrônico"},{"id":"cc-9606","name":"9606 - Serviço Desenvolvimento SW"},{"id":"cc-9724","name":"9724 - AUTOMAÇÃO DE APLICAÇÃO DE ETIQUETA"},{"id":"cc-9802","name":"9802 - SERVIÇO DE MANUTENÇÃO ESD"},{"id":"cc-001327","name":"001327 - Barrier"},{"id":"cc-001329","name":"001329 - Serviço Lab. Industria 4.0"},{"id":"cc-001331","name":"001331 - Vessel Tracking - Cygnus"},{"id":"cc-001334","name":"001334 - Profit Model"},{"id":"cc-001335","name":"001335 - Damper – Fase II"},{"id":"cc-001336","name":"001336 - AX Academy"},{"id":"cc-001401","name":"001401 - OPERACIONAL COST"},{"id":"cc-001506","name":"001506 - BUNKER"},{"id":"cc-001508","name":"001508 - LG - ZONA FRANCA MASTER"},{"id":"cc-001604","name":"001604 - Capacitação Ensino Médio Técnico em Automação Industrial"},{"id":"cc-001605","name":"001605 - Capacitação Técnico em Automação Industrial"},{"id":"cc-001606","name":"001606 - IA para transformação digital na Indústria 4.0"},{"id":"cc-001909","name":"001909 - Conceitos Básicos Ind. 4.0 - Sense Bike"},{"id":"cc-001910","name":"001910 - Introdução a Manufatura Avanç - Samsung"},{"id":"cc-001911","name":"001911 - Introdução a Manufatura Avanç - Salcomp"},{"id":"cc-001912","name":"001912 - Produção Enxuta para Ind 4.0 - Samsung"},{"id":"cc-001913","name":"001913 - Interface Homem Máquina - Samsung"},{"id":"cc-001914","name":"001914 - Big Data - Samsung"},{"id":"cc-001915","name":"001915 - Computação em Nuvem - Samsung"},{"id":"cc-001916","name":"001916 - Internet das Coisas - IoT - Samsung"},{"id":"cc-001917","name":"001917 - Integração de Sistemas Manufatura - Samsung"},{"id":"cc-001918","name":"001918 - Conceitos Básico para a Industria 4.0 - Salcomp"},{"id":"cc-001919","name":"001919 - Integração de Sistemas Manufatura - Salcomp"},{"id":"cc-001920","name":"001920 - Segurança Cibernética - LG"},{"id":"cc-001921","name":"001921 - Inovação em Design Thinking - LG"},{"id":"cc-001922","name":"001922 - Inteligência Artificial - Samsung"},{"id":"cc-001923","name":"001923 - Técnicas de Simulação - Samsung"},{"id":"cc-001924","name":"001924 - Produção Enxuta para a Indústria 4.0 - Salcomp"},{"id":"cc-001925","name":"001925 - NCR - Automação Industrial"},{"id":"cc-001926","name":"001926 - Salcomp - Abordagem Seis Sigma"},{"id":"cc-001927","name":"001927 - Sense Bike - Automação Industrial"},{"id":"cc-001928","name":"001928 - Sistema Embarcados - Samsung"},{"id":"cc-001929","name":"001929 - Automação Industrial - Salcomp"},{"id":"cc-001930","name":"001930 - Conceitos Básicos Ind 4.0 - Diebold"},{"id":"cc-001931","name":"001931 - Salcomp - Metodologia Seis Sigmas"},{"id":"cc-001932","name":"001932 - Industria 4.0 - LG"},{"id":"cc-001933","name":"001933 - Produção Enxuta para Industria 4.0 - Diebold"},{"id":"cc-002102","name":"002102 - IFAM AGENDAMENTO"},{"id":"cc-100202","name":"100202 - Smart HaaS ACC Brasil"},{"id":"cc-100301","name":"100301 - Projeto APEX"},{"id":"cc-100501","name":"100501 - Serviços SW - Ceras Johnson"},{"id":"cc-100601","name":"100601 - Serviços Portal CM7"},{"id":"cc-100701","name":"100701 - Teste de SW Sasmet"},{"id":"cc-100901","name":"100901 - GIV LATAM"},{"id":"cc-101202","name":"101202 - TORPEDO – Solução Gestão Recargas Veículos Elétricos"},{"id":"cc-101203","name":"101203 - goNANSEN"},{"id":"cc-101402","name":"101402 - AUTO RTS"},{"id":"cc-101403","name":"101403 - Receive HUB"},{"id":"cc-101404","name":"101404 - EdgeAI"},{"id":"cc-101405","name":"101405 - Global IPR 2.0"},{"id":"cc-101406","name":"101406 - WAC"},{"id":"cc-101605","name":"101605 - PUR 019/2021 - E-People - TPV"},{"id":"cc-101607","name":"101607 - PUR 104/2023 - Capacitação Tec. Automação Industrial - Diebold"},{"id":"cc-101608","name":"101608 - PUR 079/2022 - Automatização do Aparafusamento de Notebooks - Positivo"},{"id":"cc-101609","name":"101609 - PUR 102/2023 - Capacitação Tec. Automação Industrial - Foxconn/TPV"},{"id":"cc-101610","name":"101610 - PUR 103/2023 - Capacitação Tec. em Informática para Internet - Foxconn/TPV"},{"id":"cc-101611","name":"101611 - PUR 140/2023 - Seleção Amostras metrológica - Sagemcom"},{"id":"cc-101612","name":"101612 - PUR 165/2023 - Capacitação Manutenção Preventiva e Preditiva - Foxconn"},{"id":"cc-101613","name":"101613 - PUR 166/2023 - Capacitação em Metrologia - Foxconn"},{"id":"cc-101614","name":"101614 - PUR 186/2023 - Treinamento para Multiplicadores de Cursos em Indústria Eletrônica - Positivo"},{"id":"cc-101615","name":"101615 - PUR 169/2023 - Certificação do IPC-771121 – Foxconn"},{"id":"cc-101616","name":"101616 - PUR 174/2023 - Capacitação Técnica em Informática para Internet - Foxconn"},{"id":"cc-101617","name":"101617 - PUR 175/2023 - Capacitação Técnica em Automação Industrial - Foxconn"},{"id":"cc-101618","name":"101618 - PUR 252/2024 - Diagnóstico de Maturidade I4.0 Acatech - Jabil"},{"id":"cc-101619","name":"101619 - PUR 241/2024 - Análise de Visão Integrada - Sagemcom"},{"id":"cc-101620","name":"101620 - PUR 235/2024 - SHIELD - TPV"},{"id":"cc-101621","name":"101621 - PUR 243/2024 - CAPACITAÇÃO EM CURSOS DE TECNOLOGIA"},{"id":"cc-101622","name":"101622 - PUR 244/2024 - CAPACITAÇÃO EM CURSOS DE GESTÃO"},{"id":"cc-101623","name":"101623 - PUR 245/2024 - CAPACITAÇÃO EM CURSOS DE COMPUTAÇÃO"},{"id":"cc-101624","name":"101624 - PUR 263/2024 - ESPECIALISTA EM TRANSFORMAÇÃO DIGITAL AVANÇADO"},{"id":"cc-101625","name":"101625 - PUR 262/2024 – Projeto Especialista em Transformação Digital Básico"},{"id":"cc-101626","name":"101626 - PUR 304/2024 - Capacitação em Analise de Dados"},{"id":"cc-101628","name":"101628 - PUR 296/2024 – Capacitação em Produção Enxuta"},{"id":"cc-101629","name":"101629 - PUR 355/2024 - Segundo Diagnóstico de Maturidade I4.0 Acatech"},{"id":"cc-101630","name":"101630 - PUR 356/2024 – Capacitação Gestão ágil Projetos Manufatura 4.0"},{"id":"cc-101631","name":"101631 - PUR 352/2024 – Capacitação Produção Enxuta"},{"id":"cc-101632","name":"101632 - PUR 340/2024 - Gestão para a Manufatura Inteligente"},{"id":"cc-101633","name":"101633 - PUR 311/2024 – Sentinela – Automação do Processo de Inventário com Drones"},{"id":"cc-101634","name":"101634 - PUR 374/2024 - Ultimate"},{"id":"cc-101635","name":"101635 - PUR 376/2024 - Capacitação em Transformação Digital"},{"id":"cc-101636","name":"101636 - PUR 398/2024 - SYSLOG"},{"id":"cc-101637","name":"101637 - PUR 386/2024 - GEMINI"},{"id":"cc-101638","name":"101638 - PUR 395/2025 - Capacitação em Tecnologia para Industria 4.0"},{"id":"cc-101639","name":"101639 - PUR 419/2025 - Certificação do IPC-7711/21"},{"id":"cc-101640","name":"101640 - PUR 339/2024 - K-DOCTOR 4.0"},{"id":"cc-101641","name":"101641 - PUR 413/2025 - RUBI"},{"id":"cc-101642","name":"101642 - PUR 410/2025 - QUARTZO"},{"id":"cc-101643","name":"101643 - PUR 458/2025 - Transformação Digital nos Processos da Qualidade para Industria 4.0"},{"id":"cc-101644","name":"101644 - PUR 459/2025 - BERÇO"},{"id":"cc-101645","name":"101645 - PUR 479/2025 - Capacitação em Manutenção Preventiva"},{"id":"cc-101646","name":"101646 - PUR 449/2025 - BMS VOLTA"},{"id":"cc-101647","name":"101647 - PUR 493/2025 - Curso Técnico em Informática para Internet"},{"id":"cc-101648","name":"101648 - PUR 537/2026 – ANDRÔMEDA"},{"id":"cc-101649","name":"101649 - PUR 536/2026 - Hyper Test"},{"id":"cc-101650","name":"101650 - PUR 556/2026 - POMS"},{"id":"cc-101651","name":"101651 - PUR 559/2026 - AGV 4.0"},{"id":"cc-101702","name":"101702 - AMAZONIA + GLOBAL"},{"id":"cc-101703","name":"101703 - PUR 23/2024 - Capacitação Técnica em Automação Industrial - DIEBOLD"},{"id":"cc-101704","name":"101704 - CNV 54/2025 - Graduação em Automação Industrial – Tecnólogo de Automação Industrial – Diebold (PUR 02/2025)"},{"id":"cc-101902","name":"101902 - SISTEMA DE INJEÇÃO DE LENTES"},{"id":"cc-102102","name":"102102 - Capacitação Profissional Técnica de Nível Médio em Automação Industrial"},{"id":"cc-102401","name":"102401 - CALL HOME"},{"id":"cc-102402","name":"102402 - CHATDL"},{"id":"cc-102403","name":"102403 - SERVIÇO DE MANUTENÇÃO DE SOFTWARE"},{"id":"cc-102501","name":"102501 - Hawk Innovation Center"},{"id":"cc-102502","name":"102502 - Hawk - Contrapartida"},{"id":"cc-102503","name":"102503 - Parque Tecnológico"},{"id":"cc-102504","name":"102504 - Parque Tecnológico - Contrapartida"},{"id":"cc-102601","name":"102601 - PPBIO BIOZER CICATRIZANTE PUR 04/2024"},{"id":"cc-102602","name":"102602 - PPBIO AMANAYARA PUR 11/2024"},{"id":"cc-102603","name":"102603 - PPBIO EKUIA PUR 10/2024"},{"id":"cc-102604","name":"102604 - PPBIO ESSENCIAL PUR 09/2024"},{"id":"cc-102605","name":"102605 - PPBIO YARA COURO PUR 08/2024"},{"id":"cc-102606","name":"102606 - PPBIO TERRAMAZONIA"},{"id":"cc-102607","name":"102607 - PPBIO DARVORE PUR 19/2024"},{"id":"cc-102608","name":"102608 - PPBIO BIOZER PHARMA PUR 20/2024"},{"id":"cc-102609","name":"102609 - PPBIO EKILIBRE PUR 21/2024"},{"id":"cc-102610","name":"102610 - PPBIO BIOAGES PUR 22/2024"},{"id":"cc-102611","name":"102611 - PPBIO ABUFARI PUR 24/2024"},{"id":"cc-102612","name":"102612 - PPBIO HIDREO (METHA) PUR 25/2024"},{"id":"cc-102613","name":"102613 - PPBIO QUESTION MARK PUR 26/2024"},{"id":"cc-102614","name":"102614 - PPBIO CASA DA AMAZONIA PUR 01/2025"},{"id":"cc-102615","name":"102615 - PPBIO GESTÃO INTELIGENTE DE RESIDUOS 005/2025"},{"id":"cc-102616","name":"102616 - PPBIO AMAZONCURE APL NA SAÚDE 007/2025"},{"id":"cc-102617","name":"102617 - PPBIO AMAZONCURE ULCERA 006/2025"},{"id":"cc-102618","name":"102618 - PPBIO CELLVA PUR 013/2025"},{"id":"cc-102619","name":"102619 - PPBIO BACTOLAC CNV 02/2026"},{"id":"cc-102620","name":"102620 - PPBIO AMACRO"},{"id":"cc-102621","name":"102621 - PPBIO ATTALEA SPECIOSA"},{"id":"cc-102622","name":"102622 - PPBIO REGENERA SAF AMAZONIA"},{"id":"cc-102623","name":"102623 - PPBIO BIOLINKER BIOLOGIA SINTETICA"},{"id":"cc-102624","name":"102624 - PPBIO SOLALIS PUR 12/2026"},{"id":"cc-102625","name":"102625 - PPBIO WAPE PUR 09/2026"},{"id":"cc-102626","name":"102626 - PPBIO PPBIO ANI PUR 16/2025"},{"id":"cc-102701","name":"102701 - INSPEÇÃO VIN - SERVIÇO"},{"id":"cc-102801","name":"102801 - LEAN SIX SIGMA"},{"id":"cc-102901","name":"102901 - SERVIÇO DE DESENVOLVIMENTO DE SOFTWARE"},{"id":"cc-103001","name":"103001 - GERAL"},{"id":"cc-103002","name":"103002 - CURSO DE EXTENSÃO"},{"id":"cc-103003","name":"103003 - ESCOLA"},{"id":"cc-103004","name":"103004 - FACULDADE"},{"id":"cc-103005","name":"103005 - PÓS-GRADUAÇÃO"},{"id":"cc-103006","name":"103006 - ENSINO TÉCNICO"},{"id":"cc-103101","name":"103101 - Capacitação em Robôs FANUC"},{"id":"cc-103201","name":"103201 - Gribouille"},{"id":"cc-103301","name":"103301 - IA com foco em Copilot"},{"id":"cc-103401","name":"103401 - GovEasy"},{"id":"cc-103501","name":"103501 - Empreender Outra Vez (Qualifica Mais)"},{"id":"cc-103601","name":"103601 - Amazônia Innovation Summit"}];
+  const LEGACY_AUTO_PROJECT_IDS = new Set(["prj-2007","prj-2012","prj-2025","prj-2027","prj-2030","prj-2036","prj-2040","prj-2041","prj-2044","prj-2051","prj-2052","prj-2055","prj-2056","prj-2058","prj-2059","prj-2063","prj-2065","prj-2069","prj-2070","prj-2072","prj-2076","prj-2077","prj-2078","prj-2079","prj-2081","prj-2082","prj-2083","prj-2084","prj-2085","prj-2505","prj-2526","prj-2527","prj-2529","prj-4711","prj-4713","prj-4714","prj-4715","prj-4716","prj-4717","prj-4718","prj-4814","prj-4815","prj-4816","prj-4817","prj-4818","prj-4819","prj-5011","prj-5012","prj-5013","prj-5014","prj-5015","prj-5016","prj-5017","prj-5018","prj-5019","prj-5410","prj-5424","prj-5425","prj-5426","prj-5427","prj-5428","prj-5429","prj-5430","prj-6946","prj-6948","prj-6949","prj-6950","prj-6951","prj-6952","prj-6953","prj-6954","prj-6955","prj-6956","prj-6957","prj-6958","prj-6959","prj-6960","prj-7728","prj-7729","prj-7730","prj-8316","prj-8317","prj-8318","prj-9007","prj-9107","prj-9601","prj-9605","prj-9606","prj-9724","prj-9802","prj-001327","prj-001329","prj-001331","prj-001334","prj-001335","prj-001336","prj-001401","prj-001506","prj-001508","prj-001604","prj-001605","prj-001606","prj-001909","prj-001910","prj-001911","prj-001912","prj-001913","prj-001914","prj-001915","prj-001916","prj-001917","prj-001918","prj-001919","prj-001920","prj-001921","prj-001922","prj-001923","prj-001924","prj-001925","prj-001926","prj-001927","prj-001928","prj-001929","prj-001930","prj-001931","prj-001932","prj-001933","prj-002102","prj-100202","prj-100301","prj-100501","prj-100601","prj-100701","prj-100901","prj-101202","prj-101203","prj-101402","prj-101403","prj-101404","prj-101405","prj-101406","prj-101605","prj-101607","prj-101608","prj-101609","prj-101610","prj-101611","prj-101612","prj-101613","prj-101614","prj-101615","prj-101616","prj-101617","prj-101618","prj-101619","prj-101620","prj-101621","prj-101622","prj-101623","prj-101624","prj-101625","prj-101626","prj-101628","prj-101629","prj-101630","prj-101631","prj-101632","prj-101633","prj-101634","prj-101635","prj-101636","prj-101637","prj-101638","prj-101639","prj-101640","prj-101641","prj-101642","prj-101643","prj-101644","prj-101645","prj-101646","prj-101647","prj-101648","prj-101649","prj-101650","prj-101651","prj-101702","prj-101703","prj-101704","prj-101902","prj-102102","prj-102401","prj-102402","prj-102403","prj-102501","prj-102502","prj-102503","prj-102504","prj-102601","prj-102602","prj-102603","prj-102604","prj-102605","prj-102606","prj-102607","prj-102608","prj-102609","prj-102610","prj-102611","prj-102612","prj-102613","prj-102614","prj-102615","prj-102616","prj-102617","prj-102618","prj-102619","prj-102620","prj-102621","prj-102622","prj-102623","prj-102624","prj-102625","prj-102626","prj-102701","prj-102801","prj-102901","prj-103001","prj-103002","prj-103003","prj-103004","prj-103005","prj-103006","prj-103101","prj-103201","prj-103301","prj-103401","prj-103501","prj-103601"]);
+  const DEFAULT_PROJECTS = [];
+  let data = {
+    entries: [],
+    activities: DEFAULT_ACTIVITIES.slice(),
+    costCenters: DEFAULT_COST_CENTERS.map(item=>({...item})),
+    collaborators: [],
+    projects: DEFAULT_PROJECTS.map(item=>({...item}))
+  };
+  let charts = {};
+  let lastReport = null;
+  const STORAGE_KEY = 'performance-data';
+  const TIMER_KEY = 'performance-timer';
+
+  let timer = { status:'idle', accumulatedMs:0, startedAt:null, colab:'', activityId:'', costCenterId:'', projectId:'', details:'', id:'' };
+  let pausedTimers = [];
+  let timerInterval = null;
+
+  const $ = (sel) => document.querySelector(sel);
+  const fmtHours = (n) => (Math.round(n*100)/100).toString().replace('.', ',');
+  const hoursToClock = (n) => { const total = Math.max(0, Math.round(Number(n||0)*3600)); const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), sec=total%60; return [h,m,sec].map(v=>String(v).padStart(2,'0')).join(':'); };
+  const parseClockToHours = (value) => { const v=String(value||'').trim().replace(',', '.'); if(/^\d+(\.\d+)?$/.test(v)) return parseFloat(v); const parts=v.split(':').map(Number); if(parts.some(Number.isNaN) || parts.length<2 || parts.length>3) return NaN; const [h,m,s=0]=parts; if(m<0||m>59||s<0||s>59) return NaN; return h + m/60 + s/3600; };
+  const uid = () => Math.random().toString(36).slice(2,10);
+
+  const THEME_KEY = 'chronos-theme';
+
+  function applyTheme(theme){
+    const normalized = theme === 'dark' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = normalized;
+    document.body.dataset.theme = normalized;
+    const btn = $('#btnThemeToggle');
+    if(btn) btn.setAttribute('aria-pressed', normalized === 'dark');
+  }
+
+  function loadTheme(){
+    const stored = localStorage.getItem(THEME_KEY);
+    applyTheme(stored === 'dark' ? 'dark' : 'light');
+  }
+
+  function toggleTheme(){
+    const current = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    applyTheme(current);
+    localStorage.setItem(THEME_KEY, current);
+  }
+
+  function toast(msg){
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2200);
+  }
+
+  // Todos os dados compartilhados (apontamentos, atividades, centros de custo,
+  // colaboradores e contas de usuário) vivem no backend/banco de dados, acessado
+  // via esta API. localStorage continua sendo usado só para preferências pessoais
+  // do navegador (tema, sessão de login local, cronômetro em andamento).
+  async function apiRequest(path, options){
+    const res = await fetch(path, {
+      headers: {'Content-Type': 'application/json'},
+      ...options,
+    });
+    if(!res.ok){
+      let msg = 'Erro na comunicação com o servidor.';
+      try{ const body = await res.json(); if(body && body.error) msg = body.error; }catch(e){}
+      throw new Error(msg);
+    }
+    if(res.status === 204) return null;
+    return res.json();
+  }
+
+  const LOGIN_KEY = 'chronos-user';
+  const ROLE_KEY = 'chronos-role';
+  let loginMode = 'login';
+
+  function getLoggedUser(){
+    return localStorage.getItem(LOGIN_KEY);
+  }
+
+  function setLoggedUser(user){
+    localStorage.setItem(LOGIN_KEY, user);
+  }
+
+  // A conta logada (username + role) fica em memória depois do login/registro
+  // bem-sucedido no servidor, para não precisarmos buscar de novo a cada checagem.
+  let loggedAccount = null;
+
+  function showLoginScreen(show){
+    const login = $('#loginScreen');
+    const app = document.querySelector('.wrap');
+    if(show){
+      login.classList.remove('hidden');
+      app.classList.add('hidden');
+    } else {
+      login.classList.add('hidden');
+      app.classList.remove('hidden');
+    }
+  }
+
+  function setLoginError(message){
+    const errorEl = $('#loginError');
+    errorEl.textContent = message;
+    errorEl.style.display = message ? 'block' : 'none';
+  }
+
+  function setRegisterError(message){
+    const errorEl = $('#registerError');
+    errorEl.textContent = message;
+    errorEl.style.display = message ? 'block' : 'none';
+  }
+
+  function getLoggedAccount(){
+    const username = getLoggedUser();
+    if(!username) return null;
+    const role = localStorage.getItem(ROLE_KEY) || 'user';
+    return { username, role };
+  }
+
+  function isAdmin(){
+    const account = getLoggedAccount();
+    return account && account.role === 'admin';
+  }
+
+  function getVisibleEntries(entries = data.entries){
+    if(isAdmin()) return entries;
+    const currentUser = getLoggedUser();
+    if(!currentUser) return [];
+    const normalizedUser = currentUser.trim().toLowerCase();
+    return entries.filter(e => {
+      const owner = String(e.createdBy || e.colab || '').trim().toLowerCase();
+      return owner === normalizedUser;
+    });
+  }
+
+  function adjustAdminFeatures(){
+    const tabCadastros = $('#tabCadastros');
+    const cadastrosView = $('#view-cadastros');
+    const admin = isAdmin();
+
+    if(tabCadastros){
+      tabCadastros.style.display = admin ? 'inline-flex' : 'none';
+    }
+    if(cadastrosView){
+      if(admin){
+        cadastrosView.classList.remove('hidden');
+      } else {
+        cadastrosView.classList.remove('active');
+        cadastrosView.classList.add('hidden');
+        const activeTab = document.querySelector('.tab-btn.active');
+        if(activeTab && activeTab.dataset.view === 'cadastros'){
+          const firstTab = document.querySelector('.tab-btn[data-view="apontamento"]');
+          if(firstTab){
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+            document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+            firstTab.classList.add('active');
+            $('#view-apontamento').classList.add('active');
+          }
+        }
+      }
+    }
+  }
+
+  function renderUserState(){
+    const user = getLoggedUser();
+    const badge = $('#userBadge');
+    const name = $('#userName');
+    const logoutButton = $('#btnLogout');
+    if(user){
+      badge.classList.remove('hidden');
+      name.textContent = user;
+      logoutButton.style.display = 'inline-flex';
+    } else {
+      badge.classList.add('hidden');
+      logoutButton.style.display = 'none';
+    }
+    adjustAdminFeatures();
+  }
+
+  function logout(){
+    localStorage.removeItem(LOGIN_KEY);
+    localStorage.removeItem(ROLE_KEY);
+    showLoginScreen(true);
+    setLoginMode('login');
+    $('#login-user').value = '';
+    $('#login-pass').value = '';
+    toast('Você saiu da sessão.');
+    renderUserState();
+  }
+
+  function setLoginMode(mode){
+    loginMode = mode === 'register' ? 'register' : 'login';
+    document.querySelectorAll('.login-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.loginMode === loginMode);
+    });
+    document.querySelector('.login-mode-login').classList.toggle('hidden', loginMode !== 'login');
+    document.querySelector('.login-mode-register').classList.toggle('hidden', loginMode !== 'register');
+    $('#loginTitle').textContent = loginMode === 'register' ? 'Crie sua conta' : 'Faça login para continuar';
+    $('#loginSubtitle').textContent = loginMode === 'register'
+      ? 'Cadastre-se para acessar o painel de apontamentos e dashboard.'
+      : 'Informe usuário e senha para acessar o painel de apontamentos e dashboard.';
+    setLoginError('');
+    setRegisterError('');
+  }
+
+  async function login(){
+    const username = $('#login-user').value.trim();
+    const password = $('#login-pass').value;
+    if(!username || !password){
+      setLoginError('Informe usuário e senha para continuar.');
+      return;
+    }
+    try{
+      const account = await apiRequest('/api/auth/login', {method:'POST', body: JSON.stringify({username, password})});
+      setLoginError('');
+      setLoggedUser(account.username);
+      localStorage.setItem(ROLE_KEY, account.role);
+      showLoginScreen(false);
+      renderUserState();
+      toast(`Bem-vindo, ${account.username}!`);
+      await loadData();
+    }catch(e){
+      setLoginError(e.message);
+    }
+  }
+
+  async function register(){
+    const username = $('#register-user').value.trim();
+    const password = $('#register-pass').value;
+    const confirm = $('#register-pass-confirm').value;
+    if(!username || !password || !confirm){
+      setRegisterError('Informe usuário e ambas as senhas.');
+      return;
+    }
+    if(password.length < 4){
+      setRegisterError('A senha deve ter pelo menos 4 caracteres.');
+      return;
+    }
+    if(password !== confirm){
+      setRegisterError('As senhas não coincidem.');
+      return;
+    }
+    try{
+      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({username, password})});
+      setRegisterError('');
+      setLoggedUser(account.username);
+      localStorage.setItem(ROLE_KEY, account.role);
+      showLoginScreen(false);
+      renderUserState();
+      toast(`Conta criada e login efetuado como ${account.username}.`);
+      await loadData();
+    }catch(e){
+      setRegisterError(e.message);
+    }
+  }
+
+  async function loadData(){
+    try{
+      const remote = await apiRequest('/api/data');
+      data.entries = remote.entries || [];
+      data.activities = (remote.activities && remote.activities.length) ? remote.activities : DEFAULT_ACTIVITIES.slice();
+      data.costCenters = remote.costCenters || [];
+      data.collaborators = remote.collaborators || [];
+      data.projects = [];
+    }catch(e){
+      console.error('Não foi possível carregar os dados do servidor.', e);
+      toast('Não foi possível conectar ao servidor. Verifique sua conexão e recarregue a página.');
+    }
+    render();
+  }
+
+  // Mantida apenas para compatibilidade; a persistência real acontece
+  // em cada chamada de API específica (create/update/delete) mais abaixo.
+  async function saveData(){}
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      btn.classList.add('active');
+      $('#view-' + btn.dataset.view).classList.add('active');
+      if(btn.dataset.view === 'dashboard') renderDashboard();
+    });
+  });
+
+  // ---------- Apontamento ----------
+  function populateActivitySelect(){
+    updateDatalists();
+  }
+
+  function populateReferenceSelects(){
+    updateDatalists();
+  }
+
+  function findActivityByNameOrId(value){
+    if(!value) return null;
+    const trimmed = String(value).trim();
+    let item = data.activities.find(a=>a.id===trimmed);
+    if(item) return item;
+    item = data.activities.find(a=>a.name.trim().toLowerCase()===trimmed.toLowerCase());
+    return item || null;
+  }
+
+  function findCostCenterByNameOrId(value){
+    if(!value) return null;
+    const trimmed = String(value).trim();
+    let item = data.costCenters.find(c=>c.id===trimmed);
+    if(item) return item;
+    item = data.costCenters.find(c=>c.name.trim().toLowerCase()===trimmed.toLowerCase());
+    return item || null;
+  }
+
+  function resolveEntryOwner(colab){
+    const currentUser = getLoggedUser();
+    return currentUser || colab;
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  $('#btnAdd').addEventListener('click', async ()=>{
+    const colab = $('#f-colab').value.trim();
+    const dataVal = $('#f-data').value;
+    const activityInput = $('#f-ativ').value;
+    const costInput = $('#f-cost').value.trim();
+    const details = $('#f-details').value.trim();
+    const horas = parseClockToHours($('#f-horas').value);
+    const activity = findActivityByNameOrId(activityInput);
+    const costCenter = costInput ? findCostCenterByNameOrId(costInput) : null;
+
+    if(!colab || !dataVal || !activity || !Number.isFinite(horas) || horas <= 0){
+      toast('Preencha colaborador, data, atividade e horas no formato HH:MM.');
+      return;
+    }
+    if(costInput && !costCenter){
+      toast('Centro de custo inválido ou não cadastrado.');
+      return;
+    }
+    const createdBy = resolveEntryOwner(colab);
+    const novoEntry = {
+      id: uid(), colab, date: dataVal, activityId: activity.id, costCenterId: costCenter ? costCenter.id : '', details, hours: horas, createdBy
+    };
+    try{
+      await apiRequest('/api/entries', {method:'POST', body: JSON.stringify(novoEntry)});
+      data.entries.unshift(novoEntry);
+      $('#f-colab').value=''; $('#f-cost').value=''; $('#f-details').value=''; $('#f-horas').value='';
+      render();
+      toast('Apontamento lançado.');
+    }catch(e){
+      toast('Não foi possível salvar o apontamento: ' + e.message);
+    }
+  });
+
+  function renderEntries(){
+    const tbody = $('#entryTableBody');
+    const visibleEntries = getVisibleEntries(data.entries);
+    const actMap = Object.fromEntries(data.activities.map(a=>[a.id,a]));
+    const costMap = Object.fromEntries(data.costCenters.map(a=>[a.id,a.name]));
+    if(visibleEntries.length === 0){
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty">Nenhum apontamento visível. Lance o primeiro acima.</div></td></tr>`;
+    } else {
+      tbody.innerHTML = visibleEntries.slice(0,50).map(e=>{
+        const act = actMap[e.activityId];
+        const tagClass = act ? act.type : 'other';
+        const actName = act ? act.name : '—';
+        const costOptions = `<option value="">Selecione</option>` + data.costCenters.map(c=>`<option value="${c.id}" ${c.id===e.costCenterId?'selected':''}>${escapeHtml(c.name)}</option>`).join('');
+        return `<tr>
+          <td>${formatDate(e.date)}</td>
+          <td>${escapeHtml(e.colab)}</td>
+          <td><span class="tag ${tagClass}">${escapeHtml(actName)}</span></td>
+          <td><select class="inline-edit-select" data-edit-cost="${e.id}">${costOptions}</select></td>
+          <td><textarea class="inline-edit-details" data-edit-details="${e.id}" placeholder="Descreva a atividade">${escapeHtml(e.details || '')}</textarea></td>
+          <td><span class="time-badge">${hoursToClock(e.hours)}</span></td>
+          <td><div class="entry-actions"><button class="btn small" data-save-entry="${e.id}">Salvar</button><button class="btn danger" data-del="${e.id}">Excluir</button></div></td>
+        </tr>`;
+      }).join('');
+    }
+    $('#entryCount').textContent = visibleEntries.length + ' lançamento(s) visível(is)' + (visibleEntries.length>50 ? ' — exibindo os 50 mais recentes' : '');
+    tbody.querySelectorAll('[data-save-entry]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.saveEntry;
+        const entry = data.entries.find(e=>e.id===id);
+        if(!entry) return;
+        const costField = tbody.querySelector(`[data-edit-cost="${id}"]`);
+        const detailsField = tbody.querySelector(`[data-edit-details="${id}"]`);
+        const costCenterId = costField ? costField.value : '';
+        const details = detailsField ? detailsField.value.trim() : '';
+        try{
+          await apiRequest(`/api/entries/${id}`, {method:'PUT', body: JSON.stringify({costCenterId, details})});
+          entry.costCenterId = costCenterId;
+          entry.details = details;
+          renderDashboard();
+          toast('Alterações salvas.');
+        }catch(e){
+          toast('Não foi possível salvar as alterações: ' + e.message);
+        }
+      });
+    });
+    tbody.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.del;
+        try{
+          await apiRequest(`/api/entries/${id}`, {method:'DELETE'});
+          data.entries = data.entries.filter(e=>e.id !== id);
+          render();
+        }catch(e){
+          toast('Não foi possível excluir o apontamento: ' + e.message);
+        }
+      });
+    });
+  }
+
+  function formatDate(iso){
+    const [y,m,d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  // ---------- Cronômetro ----------
+  function loadTimer(){
+    try{
+      const raw = localStorage.getItem(TIMER_KEY);
+      if(!raw) return;
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.timer && Array.isArray(parsed.pausedTimers)){
+        timer = Object.assign(timer, parsed.timer);
+        pausedTimers = parsed.pausedTimers.map(t => ({
+          status: 'paused',
+          accumulatedMs: 0,
+          startedAt: null,
+          colab: '',
+          activityId: '',
+          costCenterId: '',
+          projectId: '',
+          details: '',
+          id: uid(),
+          ...t
+        }));
+      } else if(parsed && parsed.status){
+        timer = Object.assign(timer, parsed);
+        pausedTimers = [];
+      }
+    }catch(e){ /* sem cronômetro salvo */ }
+  }
+
+  function saveTimer(){
+    try{ localStorage.setItem(TIMER_KEY, JSON.stringify({ timer, pausedTimers })); }
+    catch(e){ console.error('Erro ao salvar cronômetro', e); }
+  }
+
+  function timerElapsedMs(){
+    return timer.accumulatedMs + (timer.status === 'running' ? Date.now() - timer.startedAt : 0);
+  }
+
+  function formatElapsed(ms){
+    const totalSec = Math.max(0, Math.floor(ms/1000));
+    const h = Math.floor(totalSec/3600);
+    const m = Math.floor((totalSec%3600)/60);
+    const s = totalSec%60;
+    return [h,m,s].map(n=>String(n).padStart(2,'0')).join(':');
+  }
+
+  function resetTimerFields(){
+    const inputs = ['#t-colab', '#t-ativ', '#t-cost', '#t-details'];
+    inputs.forEach(selector => {
+      const el = $(selector);
+      if(el) el.value = '';
+    });
+  }
+
+  function renderTimer(){
+    const display = $('#timerDisplay');
+    const elapsed = timerElapsedMs();
+    display.textContent = formatElapsed(elapsed);
+    display.classList.toggle('running', timer.status === 'running');
+
+    $('#t-colab').value = timer.colab || '';
+    if($('#t-cost')) $('#t-cost').value = timer.costCenterId ? (findCostCenterByNameOrId(timer.costCenterId)?.name || timer.costCenterId) : '';
+    if($('#t-details')) $('#t-details').value = timer.details || '';
+    if($('#t-ativ')) $('#t-ativ').value = timer.activityId ? (findActivityByNameOrId(timer.activityId)?.name || timer.activityId) : '';
+
+    const isRunning = timer.status === 'running';
+    const isIdle = timer.status === 'idle';
+    const isPaused = timer.status === 'paused';
+
+    $('#t-colab').disabled = isRunning;
+    $('#t-ativ').disabled = isRunning;
+    $('#t-cost').disabled = isRunning;
+    $('#t-details').disabled = isRunning;
+
+    $('#btnTimerStart').textContent = isPaused ? 'Retomar' : 'Iniciar';
+    $('#btnTimerStart').disabled = isRunning;
+    $('#btnTimerNew').disabled = false;
+    $('#btnTimerPause').disabled = !isRunning;
+    $('#btnTimerReset').disabled = isIdle;
+    $('#btnTimerFinish').disabled = isIdle || elapsed < 1000;
+
+    const hint = $('#timerHint');
+    if(isRunning) hint.textContent = 'Cronômetro rodando — pode navegar entre as abas, ele continua contando.';
+    else if(isPaused) hint.textContent = 'Pausado. Use Novo cronômetro para iniciar outro ou retome este.';
+    else hint.textContent = '';
+    renderTimerList();
+  }
+
+  function tickTimer(){ renderTimer(); saveTimer(); }
+
+  function startTimerInterval(){
+    if(timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(tickTimer, 1000);
+  }
+
+  $('#btnTimerNew').addEventListener('click', ()=>{
+    if(timer.status === 'running' || timer.status === 'paused'){
+      pauseCurrentTimer();
+    }
+    timer = { status:'idle', accumulatedMs:0, startedAt:null, colab:'', activityId:'', costCenterId:'', projectId:'', details:'', id:'' };
+    resetTimerFields();
+    saveTimer();
+    render();
+    toast('Novo cronômetro pronto para ser iniciado.');
+  });
+
+  $('#btnTimerStart').addEventListener('click', ()=>{
+    if(timer.status === 'running') return;
+    const colab = $('#t-colab').value.trim();
+    const activityInput = $('#t-ativ').value;
+    const costInput = $('#t-cost').value.trim();
+    const activity = findActivityByNameOrId(activityInput);
+    const costCenter = costInput ? findCostCenterByNameOrId(costInput) : null;
+    if(!colab){ toast('Informe o colaborador antes de iniciar.'); return; }
+    if(!activity){ toast('Informe uma atividade válida antes de iniciar.'); return; }
+    if(costInput && !costCenter){ toast('Centro de custo inválido ou não cadastrado.'); return; }
+
+    if(timer.status === 'paused'){
+      timer.status = 'running';
+      timer.startedAt = Date.now();
+    } else {
+      timer = {
+        id: uid(),
+        status: 'running',
+        accumulatedMs: 0,
+        startedAt: Date.now(),
+        colab,
+        activityId: activity.id,
+        costCenterId: costCenter ? costCenter.id : '',
+        projectId: '',
+        details: $('#t-details').value.trim()
+      };
+    }
+    saveTimer();
+    startTimerInterval();
+    tickTimer();
+  });
+
+  $('#btnTimerPause').addEventListener('click', ()=>{
+    if(timer.status !== 'running') return;
+    if(timer.status === 'running'){
+      timer.accumulatedMs += Date.now() - timer.startedAt;
+      timer.startedAt = null;
+      timer.status = 'paused';
+      pausedTimers.unshift({...timer});
+      timer = { status:'idle', accumulatedMs:0, startedAt:null, colab:'', activityId:'', costCenterId:'', projectId:'', details:'', id:'' };
+      saveTimer();
+    }
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+    tickTimer();
+  });
+
+  $('#btnTimerReset').addEventListener('click', ()=>{
+    if(timer.status === 'idle') return;
+    if(!confirm('Descartar o tempo cronometrado?')) return;
+    if(timer.status === 'running' && timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+    timer = { status:'idle', accumulatedMs:0, startedAt:null, colab:'', activityId:'', costCenterId:'', projectId:'', details:'', id:'' };
+    $('#t-colab').value=''; $('#t-cost').value=''; $('#t-ativ').value=''; $('#t-details').value='';
+    saveTimer();
+    renderTimer();
+  });
+
+  $('#btnTimerFinish').addEventListener('click', async ()=>{
+    if(timer.status !== 'running') return;
+    timer.accumulatedMs += Date.now() - timer.startedAt;
+    timer.startedAt = null;
+    const elapsed = timer.accumulatedMs;
+    if(timerInterval){ clearInterval(timerInterval); timerInterval = null; }
+
+    const hours = Math.round((elapsed/3600000)*100)/100;
+    if(hours <= 0){
+      toast('Tempo muito curto para lançar (mínimo ~36s).');
+      timer.status = 'running';
+      timer.startedAt = Date.now();
+      startTimerInterval();
+      tickTimer();
+      return;
+    }
+
+    const novoEntry = {
+      id: uid(), colab: timer.colab, date: new Date().toISOString().slice(0,10),
+      activityId: timer.activityId, costCenterId: timer.costCenterId, details: timer.details, hours,
+      createdBy: resolveEntryOwner(timer.colab)
+    };
+    try{
+      await apiRequest('/api/entries', {method:'POST', body: JSON.stringify(novoEntry)});
+      data.entries.unshift(novoEntry);
+    }catch(e){
+      toast('Não foi possível salvar o apontamento do cronômetro: ' + e.message);
+      timer.status = 'running';
+      timer.startedAt = Date.now();
+      startTimerInterval();
+      tickTimer();
+      return;
+    }
+
+    timer = { status:'idle', accumulatedMs:0, startedAt:null, colab:'', activityId:'', costCenterId:'', projectId:'', details:'', id:'' };
+    $('#t-colab').value=''; $('#t-cost').value=''; $('#t-ativ').value=''; $('#t-details').value='';
+    saveTimer();
+    render();
+    toast(`Apontamento de ${fmtHours(hours)}h lançado pelo cronômetro.`);
+  });
+
+  function pauseCurrentTimer(){
+    if(timer.status !== 'running' && timer.status !== 'paused') return;
+    if(timer.status === 'running'){
+      timer.accumulatedMs += Date.now() - timer.startedAt;
+      timer.startedAt = null;
+    }
+    timer.status = 'paused';
+    timer.id = timer.id || uid();
+    pausedTimers.unshift({...timer});
+    timer = { status:'idle', accumulatedMs:0, startedAt:null, colab:'', activityId:'', costCenterId:'', projectId:'', details:'', id:'' };
+    saveTimer();
+  }
+
+  function renderTimerList(){
+    const list = $('#timerList');
+    if(!list) return;
+    if(pausedTimers.length === 0){
+      list.innerHTML = '<div class="empty">Nenhum cronômetro pausado.</div>';
+      return;
+    }
+    list.innerHTML = pausedTimers.map(t => {
+      const elapsed = formatElapsed(t.accumulatedMs);
+      const act = findActivityByNameOrId(t.activityId);
+      return `<div class="activity-item"><div><strong>${escapeHtml(t.colab || 'Sem colaborador')}</strong> · ${escapeHtml(act ? act.name : 'Atividade não encontrada')}<br><small>${elapsed}</small></div><div class="entry-actions"><button class="btn small" data-resume-timer="${t.id}">Retomar</button><button class="btn danger small" data-delete-timer="${t.id}">Excluir</button></div></div>`;
+    }).join('');
+    list.querySelectorAll('[data-resume-timer]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.dataset.resumeTimer;
+        if(!id) return;
+        if(timer.status === 'running') pauseCurrentTimer();
+        const index = pausedTimers.findIndex(item => item.id === id);
+        if(index === -1) return;
+        timer = pausedTimers.splice(index,1)[0];
+        timer.status = 'running';
+        timer.startedAt = Date.now();
+        saveTimer();
+        startTimerInterval();
+        render();
+      });
+    });
+    list.querySelectorAll('[data-delete-timer]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.deleteTimer;
+        pausedTimers = pausedTimers.filter(item => item.id !== id);
+        saveTimer();
+        renderTimerList();
+      });
+    });
+  }
+
+  function initTimer(){
+    loadTimer();
+    if(timer.status === 'running') startTimerInterval();
+    renderTimer();
+  }
+
+  // ---------- Atividades ----------
+  $('#btnAddAtividade').addEventListener('click', async ()=>{
+    const nome = $('#a-nome').value.trim();
+    const tipo = $('#a-tipo').value;
+    if(!nome){ toast('Informe o nome da atividade.'); return; }
+    const nova = {id: uid(), name: nome, type: tipo};
+    try{
+      await apiRequest('/api/activities', {method:'POST', body: JSON.stringify(nova)});
+      data.activities.push(nova);
+      $('#a-nome').value = '';
+      render();
+      toast('Atividade adicionada.');
+    }catch(e){
+      toast('Não foi possível adicionar a atividade: ' + e.message);
+    }
+  });
+
+  function renderActivities(){
+    const list = $('#activityList');
+    const typeLabel = {core:'Core', admin:'Administrativa', other:'Outro'};
+    list.innerHTML = data.activities.map(a=>`
+      <div class="activity-item">
+        <span class="name">${escapeHtml(a.name)}</span>
+        <span class="meta">
+          <span class="tag ${a.type}">${typeLabel[a.type]}</span>
+          <button class="btn danger" data-delact="${a.id}">Remover</button>
+        </span>
+      </div>
+    `).join('');
+    list.querySelectorAll('[data-delact]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.delact;
+        const inUse = data.entries.some(e=>e.activityId===id);
+        if(inUse && !confirm('Essa atividade está sendo usada em apontamentos. Remover mesmo assim?')) return;
+        try{
+          await apiRequest(`/api/activities/${id}`, {method:'DELETE'});
+          data.activities = data.activities.filter(a=>a.id!==id);
+          render();
+        }catch(e){
+          toast('Não foi possível remover a atividade: ' + e.message);
+        }
+      });
+    });
+  }
+
+
+  // ---------- Cadastros ----------
+  function renderReferences(){
+    const renderList=(selector,items,attr)=>{
+      const el=$(selector); if(!el) return;
+      el.innerHTML = items.length ? items.map(i=>`<div class="activity-item"><span class="name">${escapeHtml(i.name)}</span><button class="btn danger" ${attr}="${i.id}">Remover</button></div>`).join('') : '<div class="empty">Nenhum cadastro ainda.</div>';
+    };
+    renderList('#costList',data.costCenters,'data-delcost');
+    renderList('#collabList',data.collaborators,'data-delcolab');
+    updateDatalists();
+  }
+
+  function updateDatalists(){
+    const colabList = $('#colabList');
+    const ativList = $('#ativList');
+    const costList = $('#costCenterList');
+    const dashColab = $('#dash-colab');
+    const dashAtiv = $('#dash-ativ');
+    const dashCost = $('#dash-cost');
+    if(colabList) colabList.innerHTML = data.collaborators.map(c=>`<option value="${escapeHtml(c.name)}"></option>`).join('');
+    if(ativList) ativList.innerHTML = data.activities.map(a=>`<option value="${escapeHtml(a.name)}"></option>`).join('');
+    if(costList) costList.innerHTML = data.costCenters.map(c=>`<option value="${escapeHtml(c.name)}"></option>`).join('');
+    if(dashColab) dashColab.innerHTML = `<option value="">Todos</option>` + data.collaborators.map(c=>`<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('');
+    if(dashAtiv) dashAtiv.innerHTML = `<option value="">Todas</option>` + data.activities.map(a=>`<option value="${escapeHtml(a.id)}">${escapeHtml(a.name)}</option>`).join('');
+    if(dashCost) dashCost.innerHTML = `<option value="">Todos</option>` + data.costCenters.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+  }
+
+  $('#btnAddCost').addEventListener('click', async ()=>{
+    const name=$('#cc-nome').value.trim();
+    if(!name){toast('Informe o centro de custo.');return;}
+    const match=name.match(/^\s*(\d+)/);
+    if(!match){toast('O centro de custo deve começar com o código numérico.');return;}
+    const id='cc-'+match[1];
+    if(data.costCenters.some(i=>i.id===id)){toast('Centro de custo já cadastrado.');return;}
+    try{
+      await apiRequest('/api/cost-centers', {method:'POST', body: JSON.stringify({id,name})});
+      data.costCenters.push({id,name});
+      $('#cc-nome').value='';
+      render();
+      toast('Centro de custo adicionado.');
+    }catch(e){
+      toast('Não foi possível adicionar o centro de custo: ' + e.message);
+    }
+  });
+
+  $('#btnAddColab').addEventListener('click', async ()=>{
+    const name = $('#colab-nome').value.trim();
+    if(!name){ toast('Informe o nome do colaborador.'); return; }
+    const id = 'colab-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    if(data.collaborators.some(i=>i.id===id || i.name.toLowerCase()===name.toLowerCase())){ toast('Colaborador já cadastrado.'); return; }
+    try{
+      await apiRequest('/api/collaborators', {method:'POST', body: JSON.stringify({id,name})});
+      data.collaborators.push({id,name});
+      $('#colab-nome').value='';
+      render();
+      toast('Colaborador adicionado.');
+    }catch(e){
+      toast('Não foi possível adicionar o colaborador: ' + e.message);
+    }
+  });
+
+  document.addEventListener('click', async ev=>{
+    if(ev.target.dataset.delcost){
+      const id=ev.target.dataset.delcost;
+      if(data.entries.some(e=>e.costCenterId===id)&&!confirm('Centro de custo em uso. Remover mesmo assim?')) return;
+      try{
+        await apiRequest(`/api/cost-centers/${id}`, {method:'DELETE'});
+        data.costCenters=data.costCenters.filter(i=>i.id!==id);
+        render();
+      }catch(e){
+        toast('Não foi possível remover o centro de custo: ' + e.message);
+      }
+    }
+    if(ev.target.dataset.delcolab){
+      const id=ev.target.dataset.delcolab;
+      if(data.entries.some(e=>e.colab===data.collaborators.find(c=>c.id===id)?.name)&&!confirm('Colaborador foi usado em lançamentos. Remover mesmo assim?')) return;
+      try{
+        await apiRequest(`/api/collaborators/${id}`, {method:'DELETE'});
+        data.collaborators=data.collaborators.filter(i=>i.id!==id);
+        render();
+      }catch(e){
+        toast('Não foi possível remover o colaborador: ' + e.message);
+      }
+    }
+  });
+
+  // ---------- Dashboard ----------
+  function getFilteredEntries(){
+    const de = $('#rep-de') ? $('#rep-de').value : '';
+    const ate = $('#rep-ate') ? $('#rep-ate').value : '';
+    const selectedColab = $('#dash-colab') ? $('#dash-colab').value : '';
+    const selectedAtiv = $('#dash-ativ') ? $('#dash-ativ').value : '';
+    const selectedCost = $('#dash-cost') ? $('#dash-cost').value : '';
+    const currentUser = getLoggedUser();
+    return data.entries.filter(e=>{
+      if(de && e.date < de) return false;
+      if(ate && e.date > ate) return false;
+      if(selectedColab && e.colab !== selectedColab) return false;
+      if(selectedAtiv && e.activityId !== selectedAtiv) return false;
+      if(selectedCost && e.costCenterId !== selectedCost) return false;
+      if(!isAdmin() && currentUser){
+      const owner = String(e.createdBy || e.colab || '').trim().toLowerCase();
+      if(owner !== currentUser.trim().toLowerCase()) return false;
+    }
+      return true;
+    });
+  }
+
+  ['#rep-de','#rep-ate','#dash-colab','#dash-ativ','#dash-cost'].forEach(sel=>{
+    document.addEventListener('change', (ev)=>{
+      if(ev.target && (ev.target.id === 'rep-de' || ev.target.id === 'rep-ate' || ev.target.id === 'dash-colab' || ev.target.id === 'dash-ativ' || ev.target.id === 'dash-cost')) renderDashboard();
+    });
+  });
+
+  document.addEventListener('click', (ev)=>{
+    if(ev.target && ev.target.id === 'btnApplyFilter'){
+      renderDashboard();
+    }
+    if(ev.target && ev.target.id === 'btnLimparPeriodo'){
+      $('#rep-de').value=''; $('#rep-ate').value='';
+      if($('#dash-colab')) $('#dash-colab').value = '';
+      if($('#dash-ativ')) $('#dash-ativ').value = '';
+      if($('#dash-cost')) $('#dash-cost').value = '';
+      renderDashboard();
+    }
+  });
+
+  function renderDashboard(){
+    const actMap = Object.fromEntries(data.activities.map(a=>[a.id,a]));
+    const filtered = getFilteredEntries();
+    const totalHoras = filtered.reduce((s,e)=>s+e.hours,0);
+
+    // KPIs
+    const coreHoras = filtered.filter(e=>actMap[e.activityId] && actMap[e.activityId].type==='core').reduce((s,e)=>s+e.hours,0);
+    const pctCore = totalHoras ? Math.round((coreHoras/totalHoras)*100) : 0;
+    const colabHoras = {};
+    filtered.forEach(e=>{ colabHoras[e.colab] = (colabHoras[e.colab]||0) + e.hours; });
+    const topColab = Object.entries(colabHoras).sort((a,b)=>b[1]-a[1])[0];
+    const ativHoras = {};
+    filtered.forEach(e=>{ const n = actMap[e.activityId]?actMap[e.activityId].name:'—'; ativHoras[n]=(ativHoras[n]||0)+e.hours; });
+    const topAtiv = Object.entries(ativHoras).sort((a,b)=>b[1]-a[1])[0];
+
+    $('#kpiRow').innerHTML = `
+      <div class="kpi"><div class="lbl">Total de horas</div><div class="val">${hoursToClock(totalHoras)}</div><div class="delta">${filtered.length} lançamentos</div></div>
+      <div class="kpi"><div class="lbl">% em atividades core</div><div class="val">${pctCore}%</div><div class="delta">${hoursToClock(coreHoras)} de ${hoursToClock(totalHoras)}</div></div>
+      <div class="kpi"><div class="lbl">Colaborador destaque</div><div class="val" style="font-size:19px;">${topColab?escapeHtml(topColab[0]):'—'}</div><div class="delta">${topColab?hoursToClock(topColab[1])+' apontadas':'sem dados'}</div></div>
+      <div class="kpi"><div class="lbl">Atividade mais frequente</div><div class="val" style="font-size:19px;">${topAtiv?escapeHtml(topAtiv[0]):'—'}</div><div class="delta">${topAtiv?hoursToClock(topAtiv[1])+' no total':'sem dados'}</div></div>
+    `;
+    $('#todayLabel').textContent = hoursToClock(totalHoras);
+
+    renderLedger(ativHoras, actMap);
+    renderChartColab(colabHoras);
+    renderChartTipo(coreHoras, totalHoras);
+    renderChartEvolucao(actMap, filtered);
+
+    lastReport = {
+      periodo: { de: $('#rep-de').value, ate: $('#rep-ate').value },
+      totalHoras, coreHoras, pctCore, topColab, topAtiv,
+      colabHoras, ativHoras, actMap, entryCount: filtered.length
+    };
+  }
+
+  const ACTIVITY_COLORS = ['#4F8BFF','#FF8C42','#52C0A6','#A352FF','#FF5C95','#7DDA2A','#F2C94C','#4A90E2','#E26DE2','#2FC2A6'];
+  function hashString(str){
+    return String(str||'').split('').reduce((h,c)=>((h<<5)-h)+c.charCodeAt(0),0);
+  }
+  function activityColor(key){
+    const hash = Math.abs(hashString(key));
+    return ACTIVITY_COLORS[hash % ACTIVITY_COLORS.length];
+  }
+  function colorForType(type){
+    return type==='core' ? getCss('--core') : type==='admin' ? getCss('--admin') : getCss('--other');
+  }
+  function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function renderLedger(ativHoras, actMap){
+    const el = $('#ledgerChart');
+    const entries = Object.entries(ativHoras).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const max = entries.length ? entries[0][1] : 1;
+    if(entries.length===0){ el.innerHTML = '<div class="empty">Sem apontamentos suficientes ainda.</div>'; }
+    else {
+      el.innerHTML = entries.map(([name,hours])=>{
+        const act = data.activities.find(a=>a.name===name);
+        const color = activityColor(act ? act.id : name);
+        const pct = Math.max(4, (hours/max)*100);
+        return `<div class="ledger-row">
+          <div class="ledger-label" title="${escapeHtml(name)}">${escapeHtml(name.length>18?name.slice(0,17)+'…':name)}<br><small>${hoursToClock(hours)}</small></div>
+          <div class="ledger-track"><div class="ledger-seg" style="width:${pct}%;background:${color};"></div></div>
+        </div>`;
+      }).join('');
+    }
+    $('#ledgerLegend').innerHTML = entries.map(([name])=>{
+      const act = data.activities.find(a=>a.name===name);
+      const color = activityColor(act ? act.id : name);
+      return `<span class="legend-item"><span class="legend-dot" style="background:${color}"></span>${escapeHtml(name)}</span>`;
+    }).join('');
+  }
+
+  function destroyChart(key){ if(charts[key]){ charts[key].destroy(); delete charts[key]; } }
+
+  function clockTooltip(context){
+    const value = context.parsed.y ?? context.parsed.x ?? context.parsed;
+    return `${context.dataset.label ? context.dataset.label + ': ' : ''}${hoursToClock(value)}`;
+  }
+  function clockTick(value){ return hoursToClock(value); }
+  function showChartEmpty(canvasId, message){
+    const canvas = document.getElementById(canvasId);
+    const wrap = canvas && canvas.parentElement;
+    if(!wrap) return;
+    wrap.querySelectorAll('.chart-empty').forEach(el=>el.remove());
+    canvas.style.display='none';
+    const div=document.createElement('div'); div.className='chart-empty'; div.textContent=message; wrap.appendChild(div);
+  }
+  function showChartCanvas(canvasId){
+    const canvas=document.getElementById(canvasId); const wrap=canvas&&canvas.parentElement;
+    if(!canvas||!wrap) return; wrap.querySelectorAll('.chart-empty').forEach(el=>el.remove()); canvas.style.display='block';
+  }
+
+  function renderChartColab(colabHoras){
+    destroyChart('colab');
+    const ranked = Object.entries(colabHoras).sort((a,b)=>b[1]-a[1]);
+    if(!ranked.length){ showChartEmpty('chartColab','Sem lançamentos no período selecionado.'); return; }
+    showChartCanvas('chartColab');
+    const ctx = document.getElementById('chartColab');
+    charts.colab = new Chart(ctx, {
+      type:'bar',
+      data:{ labels:ranked.map(x=>x[0]), datasets:[{ label:'Tempo apontado', data:ranked.map(x=>x[1]), backgroundColor:ranked.map(x=>activityColor(x[0])), borderColor:ranked.map(x=>activityColor(x[0])), borderRadius:7, maxBarThickness:42, borderWidth:1 }] },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:clockTooltip}}},
+        scales:{
+          y:{beginAtZero:true, grid:{color:getCss('--line')}, ticks:{callback:clockTick}, title:{display:true,text:'Tempo (HH:MM:SS)'}},
+          x:{grid:{display:false}, ticks:{maxRotation:35,minRotation:0}}
+        }
+      }
+    });
+  }
+
+  function renderChartTipo(coreHoras, totalHoras){
+    destroyChart('tipo');
+    if(totalHoras<=0){ showChartEmpty('chartTipo','Sem lançamentos no período selecionado.'); return; }
+    showChartCanvas('chartTipo');
+    const adminHoras = Math.max(totalHoras - coreHoras, 0);
+    const ctx = document.getElementById('chartTipo');
+    charts.tipo = new Chart(ctx, {
+      type:'doughnut',
+      data:{labels:['Core','Administrativo / Outro'],datasets:[{label:'Tempo',data:[coreHoras,adminHoras],backgroundColor:[getCss('--core'),getCss('--admin')],borderWidth:2,borderColor:'#fff'}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:12,font:{size:12}}},tooltip:{callbacks:{label:(c)=>`${c.label}: ${hoursToClock(c.parsed)}`}}},cutout:'62%'}
+    });
+  }
+
+  function renderChartEvolucao(actMap, filtered){
+    destroyChart('evol');
+    const weekMap = {};
+    (filtered || data.entries).forEach(e=>{ const wk=isoWeekLabel(e.date); weekMap[wk]=(weekMap[wk]||0)+e.hours; });
+    const labels=Object.keys(weekMap).sort((a,b)=>{ const [wa,ya]=a.slice(1).split('/').map(Number); const [wb,yb]=b.slice(1).split('/').map(Number); return ya-yb||wa-wb; });
+    if(!labels.length){ showChartEmpty('chartEvolucao','Sem lançamentos no período selecionado.'); return; }
+    showChartCanvas('chartEvolucao');
+    const values=labels.map(l=>weekMap[l]);
+    const ctx=document.getElementById('chartEvolucao');
+    charts.evol=new Chart(ctx,{
+      type:'line',
+      data:{labels,datasets:[{label:'Tempo apontado',data:values,borderColor:getCss('--accent'),backgroundColor:'rgba(14,124,116,0.12)',fill:true,tension:0.25,pointRadius:4,pointHoverRadius:6,borderWidth:2}]},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:clockTooltip}}},scales:{y:{beginAtZero:true,grid:{color:getCss('--line')},ticks:{callback:clockTick},title:{display:true,text:'Tempo (HH:MM:SS)'}},x:{grid:{display:false},title:{display:true,text:'Semana'}}}}
+    });
+  }
+
+  function isoWeekLabel(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    const target = new Date(d.valueOf());
+    const dayNr = (d.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = new Date(target.getFullYear(),0,4);
+    const weekNr = 1 + Math.round(((target - firstThursday) / 86400000 - 3 + ((firstThursday.getDay()+6)%7)) / 7);
+    return `S${weekNr.toString().padStart(2,'0')}/${target.getFullYear()}`;
+  }
+
+  // ---------- Exportação em PDF ----------
+  function exportPrintableReport(){
+    const filtered=getFilteredEntries();
+    const actMap=Object.fromEntries(data.activities.map(a=>[a.id,a.name]));
+    const costMap=Object.fromEntries(data.costCenters.map(a=>[a.id,a.name]));
+    const rows=filtered.map(e=>`<tr><td>${formatDate(e.date)}</td><td>${escapeHtml(e.colab)}</td><td>${escapeHtml(actMap[e.activityId]||'—')}</td><td>${escapeHtml(costMap[e.costCenterId]||'—')}</td><td>${hoursToClock(e.hours)}</td><td>${escapeHtml(e.details||'—')}</td></tr>`).join('');
+    const win=window.open('','_blank');
+    if(!win) throw new Error('O navegador bloqueou a janela do relatório. Permita pop-ups e tente novamente.');
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Relatório de Performance</title><style>body{font-family:Arial,sans-serif;color:#17242e;padding:28px}h1{font-size:22px}p{color:#647480}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:7px;border-bottom:1px solid #dfe5e6;text-align:left;vertical-align:top}th{background:#f3f6f6} .summary{display:flex;gap:20px;margin:18px 0}.box{border:1px solid #dfe5e6;border-radius:8px;padding:12px}.box strong{display:block;font-size:18px}@media print{button{display:none}body{padding:0}}</style></head><body><button onclick="window.print()">Imprimir / Salvar como PDF</button><h1>Relatório de Gestão de Performance</h1><p>Gerado em ${new Date().toLocaleString('pt-BR')}</p><div class="summary"><div class="box">Tempo total<strong>${hoursToClock(filtered.reduce((s,e)=>s+e.hours,0))}</strong></div><div class="box">Lançamentos<strong>${filtered.length}</strong></div></div><table><thead><tr><th>Data</th><th>Colaborador</th><th>Atividade</th><th>Centro de custo</th><th>Tempo</th><th>Detalhamento</th></tr></thead><tbody>${rows||'<tr><td colspan="6">Sem lançamentos no período.</td></tr>'}</tbody></table></body></html>`);
+    win.document.close(); win.focus(); setTimeout(()=>win.print(),300);
+  }
+
+  async function exportPdf(){
+    if(!lastReport){ renderDashboard(); }
+    const btn = $('#btnExportPdf');
+    btn.disabled = true;
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Gerando PDF...';
+
+    try{
+      if(!window.jspdf || !window.jspdf.jsPDF){ exportPrintableReport(); toast('Relatório aberto para impressão ou salvamento em PDF.'); return; }
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit:'pt', format:'a4' });
+      if(typeof doc.autoTable !== 'function'){ exportPrintableReport(); toast('Relatório aberto para impressão ou salvamento em PDF.'); return; }
+      const pageW = doc.internal.pageSize.getWidth();
+      const margin = 40;
+      let y = 50;
+
+      const inkRGB = [23,36,46];
+      const mutedRGB = [100,116,128];
+      const accentRGB = [14,124,116];
+      const warnRGB = [200,121,42];
+
+      // Título
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(18);
+      doc.setTextColor(...inkRGB);
+      doc.text('Relatório de Gestão de Performance', margin, y);
+      y += 18;
+
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      doc.setTextColor(...mutedRGB);
+      const hoje = new Date().toLocaleDateString('pt-BR');
+      const periodoTxt = (lastReport.periodo.de || lastReport.periodo.ate)
+        ? `Período: ${lastReport.periodo.de ? formatDate(lastReport.periodo.de) : 'início'} até ${lastReport.periodo.ate ? formatDate(lastReport.periodo.ate) : 'hoje'}`
+        : 'Período: todos os lançamentos registrados';
+      doc.text(`${periodoTxt}  ·  Gerado em ${hoje}`, margin, y);
+      y += 24;
+
+      doc.setDrawColor(223,229,230);
+      doc.line(margin, y, pageW - margin, y);
+      y += 22;
+
+      // KPIs
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...inkRGB);
+      doc.text('Indicadores gerais', margin, y);
+      y += 18;
+
+      const kpis = [
+        ['Total de horas apontadas', hoursToClock(lastReport.totalHoras)],
+        ['Lançamentos no período', String(lastReport.entryCount)],
+        ['% do tempo em atividades core', lastReport.pctCore + '%'],
+        ['Colaborador com mais horas', lastReport.topColab ? `${lastReport.topColab[0]} (${hoursToClock(lastReport.topColab[1])})` : '—'],
+        ['Atividade mais frequente', lastReport.topAtiv ? `${lastReport.topAtiv[0]} (${hoursToClock(lastReport.topAtiv[1])})` : '—'],
+      ];
+      doc.autoTable({
+        startY: y, margin:{left:margin,right:margin},
+        theme:'plain', body: kpis,
+        styles:{ fontSize:10, textColor:inkRGB, cellPadding:{top:3,bottom:3,left:0,right:6} },
+        columnStyles:{ 0:{textColor:mutedRGB, cellWidth:220}, 1:{fontStyle:'bold'} }
+      });
+      y = doc.lastAutoTable.finalY + 20;
+
+      // Tabela: horas por atividade
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...inkRGB);
+      doc.text('Horas por atividade', margin, y);
+      y += 8;
+      const ativRows = Object.entries(lastReport.ativHoras).sort((a,b)=>b[1]-a[1]).map(([name,hrs])=>{
+        const act = data.activities.find(a=>a.name===name);
+        const tipo = act ? (act.type==='core'?'Core':act.type==='admin'?'Administrativa':'Outro') : '—';
+        const pct = lastReport.totalHoras ? Math.round((hrs/lastReport.totalHoras)*100) : 0;
+        return [name, tipo, hoursToClock(hrs), pct+'%'];
+      });
+      doc.autoTable({
+        startY: y+6, margin:{left:margin,right:margin},
+        head:[['Atividade','Tipo','Horas','% do total']],
+        body: ativRows.length ? ativRows : [['Sem lançamentos no período','—','—','—']],
+        styles:{ fontSize:9.5, textColor:inkRGB },
+        headStyles:{ fillColor:[243,246,246], textColor:inkRGB, fontStyle:'bold', lineWidth:0.5, lineColor:[223,229,230] },
+        alternateRowStyles:{ fillColor:[250,251,251] },
+      });
+      y = doc.lastAutoTable.finalY + 20;
+
+      // Tabela: horas por colaborador
+      if(y > 650){ doc.addPage(); y = 50; }
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(12);
+      doc.setTextColor(...inkRGB);
+      doc.text('Horas por colaborador', margin, y);
+      y += 8;
+      const colabRows = Object.entries(lastReport.colabHoras).sort((a,b)=>b[1]-a[1]).map(([name,hrs])=>{
+        const pct = lastReport.totalHoras ? Math.round((hrs/lastReport.totalHoras)*100) : 0;
+        return [name, hoursToClock(hrs), pct+'%'];
+      });
+      doc.autoTable({
+        startY: y+6, margin:{left:margin,right:margin},
+        head:[['Colaborador','Horas','% do total']],
+        body: colabRows.length ? colabRows : [['Sem lançamentos no período','—','—']],
+        styles:{ fontSize:9.5, textColor:inkRGB },
+        headStyles:{ fillColor:[243,246,246], textColor:inkRGB, fontStyle:'bold', lineWidth:0.5, lineColor:[223,229,230] },
+        alternateRowStyles:{ fillColor:[250,251,251] },
+      });
+      y = doc.lastAutoTable.finalY + 24;
+
+      // Tabela detalhada de lançamentos
+      if(y > 560){ doc.addPage(); y = 50; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...inkRGB); doc.text('Lançamentos detalhados', margin, y); y += 8;
+      const costMapPdf = Object.fromEntries(data.costCenters.map(i=>[i.id,i.name]));
+      const filteredEntriesPdf = getFilteredEntries();
+      const entryRows = filteredEntriesPdf.map(e=>{ const act=data.activities.find(a=>a.id===e.activityId); return [formatDate(e.date),e.colab,act?act.name:'—',costMapPdf[e.costCenterId]||'—',hoursToClock(e.hours),e.details||'—']; });
+      doc.autoTable({ startY:y+6, margin:{left:margin,right:margin}, head:[['Data','Colaborador','Atividade','C. custo','Tempo','Detalhamento']], body:entryRows.length?entryRows:[['—','—','Sem lançamentos','—','—','—','—']], styles:{fontSize:7.5,textColor:inkRGB,overflow:'linebreak'}, headStyles:{fillColor:[243,246,246],textColor:inkRGB,fontStyle:'bold'}, columnStyles:{5:{cellWidth:130}} });
+      y = doc.lastAutoTable.finalY + 20;
+
+      // Gráficos (snapshot dos canvases)
+      const chartDefs = [
+        { key:'colab', title:'Horas por colaborador' },
+        { key:'tipo', title:'Core vs. Administrativo' },
+        { key:'evol', title:'Evolução semanal de horas' },
+      ];
+      for(const cd of chartDefs){
+        const chart = charts[cd.key];
+        if(!chart) continue;
+        if(y > 560){ doc.addPage(); y = 50; }
+        doc.setFont('helvetica','bold');
+        doc.setFontSize(11);
+        doc.setTextColor(...inkRGB);
+        doc.text(cd.title, margin, y);
+        y += 10;
+        const imgData = chart.toBase64Image('image/png', 1.0);
+        const imgW = pageW - margin*2;
+        const imgH = imgW * 0.45;
+        doc.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+        y += imgH + 24;
+      }
+
+      const fileDate = new Date().toISOString().slice(0,10);
+      doc.save(`relatorio-performance-${fileDate}.pdf`);
+      toast('Relatório PDF gerado.');
+    }catch(e){
+      console.error('Erro ao gerar PDF', e);
+      toast('Não foi possível gerar o PDF: ' + (e.message || 'erro desconhecido')); 
+    }finally{
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  }
+
+  document.addEventListener('click', (ev)=>{
+    if(ev.target && ev.target.id === 'btnExportPdf') exportPdf();
+  });
+
+  function render(){
+    populateActivitySelect();
+    populateReferenceSelects();
+    renderEntries();
+    renderActivities();
+    renderReferences();
+    renderTimer();
+    if($('#view-dashboard').classList.contains('active')) renderDashboard();
+  }
+
+  $('#btnThemeToggle').addEventListener('click', toggleTheme);
+  loadTheme();
+
+  $('#btnLogin').addEventListener('click', login);
+  $('#btnRegister').addEventListener('click', register);
+  $('#login-pass').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') login(); });
+  $('#register-pass-confirm').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') register(); });
+  document.querySelectorAll('.login-tab').forEach(btn=>{
+    btn.addEventListener('click', ()=> setLoginMode(btn.dataset.loginMode));
+  });
+
+  function initLogin(){
+    setLoginMode('login');
+    renderUserState();
+    if(getLoggedUser()){
+      showLoginScreen(false);
+    } else {
+      showLoginScreen(true);
+    }
+    adjustAdminFeatures();
+  }
+
+  // set default date to today
+  $('#f-data').value = new Date().toISOString().slice(0,10);
+
+  $('#btnLogout').addEventListener('click', logout);
+
+  initLogin();
+  loadData();
+  initTimer();
+})();
+
+</script>
+</body>
+</html>

@@ -121,6 +121,9 @@
   .login-form{display:grid;gap:14px;}
   .login-form input{width:100%;}
   .login-actions{text-align:right;margin-top:6px;}
+  .login-links{display:flex;justify-content:flex-end;margin-top:-2px;}
+  .link-button{background:none;border:none;padding:0;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;}
+  .forgot-password-form{display:grid;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-soft);margin-top:6px;}
   .login-error{display:none;color:var(--warn);font-size:13px;margin-top:4px;}
   .login-footer{margin-top:18px;font-size:12px;color:var(--muted-2);line-height:1.5;}
   .login-nav{display:flex;gap:10px;margin-bottom:22px;}
@@ -504,26 +507,37 @@
       <button class="login-tab active" type="button" data-login-mode="login">Entrar</button>
       <button class="login-tab" type="button" data-login-mode="register">Cadastrar</button>
     </div>
-    <p id="loginSubtitle">Informe usuário e senha para acessar o painel de apontamentos e dashboard.</p>
+    <p id="loginSubtitle">Informe seu e-mail e senha para acessar o painel de apontamentos e dashboard.</p>
     <div class="login-form login-mode login-mode-login">
       <div>
-        <label for="login-user">Usuário</label>
-        <input id="login-user" type="text" placeholder="Seu nome ou e-mail" autocomplete="username">
+        <label for="login-user">E-mail</label>
+        <input id="login-user" type="email" placeholder="seu@email.com" autocomplete="email">
       </div>
       <div>
         <label for="login-pass">Senha</label>
         <input id="login-pass" type="password" placeholder="Senha" autocomplete="current-password">
       </div>
+      <div class="login-links">
+        <button class="link-button" id="btnForgotPassword" type="button">Esqueci minha senha</button>
+      </div>
+      <div class="forgot-password-form hidden" id="forgotPasswordPanel">
+        <label for="forgot-email">E-mail cadastrado</label>
+        <input id="forgot-email" type="email" placeholder="seu@email.com" autocomplete="email">
+        <div class="login-actions">
+          <button class="btn ghost small" id="btnResetPassword" type="button">Enviar senha temporária</button>
+        </div>
+        <div class="login-error" id="forgotError"></div>
+      </div>
       <div class="login-error" id="loginError"></div>
       <div class="login-actions">
         <button class="btn" id="btnLogin" type="button">Entrar</button>
       </div>
-      <div class="login-footer">A senha é verificada localmente e seus dados ficam salvos apenas neste navegador.</div>
+      <div class="login-footer">Os dados de acesso são salvos no servidor para manter o seu painel disponível.</div>
     </div>
     <div class="login-form hidden login-mode login-mode-register">
       <div>
-        <label for="register-user">Usuário</label>
-        <input id="register-user" type="text" placeholder="Escolha um nome" autocomplete="username">
+        <label for="register-user">E-mail</label>
+        <input id="register-user" type="email" placeholder="seu@email.com" autocomplete="email">
       </div>
       <div>
         <label for="register-pass">Senha</label>
@@ -537,7 +551,7 @@
       <div class="login-actions">
         <button class="btn" id="btnRegister" type="button">Cadastrar</button>
       </div>
-      <div class="login-footer">Ao cadastrar, você poderá entrar com este usuário no próximo acesso. Seus dados continuam apenas neste navegador.</div>
+      <div class="login-footer">Ao cadastrar, você poderá entrar com este e-mail no próximo acesso.</div>
     </div>
   </div>
 </div>
@@ -887,6 +901,22 @@
   const ROLE_KEY = 'chronos-role';
   let loginMode = 'login';
 
+  function setForgotError(message){
+    const errorEl = $('#forgotError');
+    errorEl.textContent = message;
+    errorEl.style.display = message ? 'block' : 'none';
+  }
+
+  function setForgotPasswordVisible(show){
+    const panel = $('#forgotPasswordPanel');
+    if(panel){
+      panel.classList.toggle('hidden', !show);
+    }
+    if(!show){
+      setForgotError('');
+    }
+  }
+
   function getLoggedUser(){
     return localStorage.getItem(LOGIN_KEY);
   }
@@ -1011,20 +1041,21 @@
     $('#loginTitle').textContent = loginMode === 'register' ? 'Crie sua conta' : 'Faça login para continuar';
     $('#loginSubtitle').textContent = loginMode === 'register'
       ? 'Cadastre-se para acessar o painel de apontamentos e dashboard.'
-      : 'Informe usuário e senha para acessar o painel de apontamentos e dashboard.';
+      : 'Informe seu e-mail e senha para acessar o painel de apontamentos e dashboard.';
     setLoginError('');
     setRegisterError('');
+    setForgotPasswordVisible(false);
   }
 
   async function login(){
-    const username = $('#login-user').value.trim();
+    const email = $('#login-user').value.trim();
     const password = $('#login-pass').value;
-    if(!username || !password){
-      setLoginError('Informe usuário e senha para continuar.');
+    if(!email || !password){
+      setLoginError('Informe e-mail e senha para continuar.');
       return;
     }
     try{
-      const account = await apiRequest('/api/auth/login', {method:'POST', body: JSON.stringify({username, password})});
+      const account = await apiRequest('/api/auth/login', {method:'POST', body: JSON.stringify({email, password})});
       setLoginError('');
       setLoggedUser(account.username);
       localStorage.setItem(ROLE_KEY, account.role);
@@ -1038,11 +1069,11 @@
   }
 
   async function register(){
-    const username = $('#register-user').value.trim();
+    const email = $('#register-user').value.trim();
     const password = $('#register-pass').value;
     const confirm = $('#register-pass-confirm').value;
-    if(!username || !password || !confirm){
-      setRegisterError('Informe usuário e ambas as senhas.');
+    if(!email || !password || !confirm){
+      setRegisterError('Informe e-mail e ambas as senhas.');
       return;
     }
     if(password.length < 4){
@@ -1054,7 +1085,7 @@
       return;
     }
     try{
-      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({username, password})});
+      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password})});
       setRegisterError('');
       setLoggedUser(account.username);
       localStorage.setItem(ROLE_KEY, account.role);
@@ -1064,6 +1095,21 @@
       await loadData();
     }catch(e){
       setRegisterError(e.message);
+    }
+  }
+
+  async function forgotPassword(){
+    const email = $('#forgot-email').value.trim();
+    if(!email){
+      setForgotError('Informe seu e-mail para recuperar a senha.');
+      return;
+    }
+    try{
+      const result = await apiRequest('/api/auth/forgot-password', {method:'POST', body: JSON.stringify({email})});
+      setForgotError(result.message || 'Verifique seu e-mail.');
+      toast(result.message || 'Verifique seu e-mail.');
+    }catch(e){
+      setForgotError(e.message);
     }
   }
 
@@ -1993,8 +2039,11 @@
 
   $('#btnLogin').addEventListener('click', login);
   $('#btnRegister').addEventListener('click', register);
+  $('#btnForgotPassword').addEventListener('click', ()=> setForgotPasswordVisible(true));
+  $('#btnResetPassword').addEventListener('click', forgotPassword);
   $('#login-pass').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') login(); });
   $('#register-pass-confirm').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') register(); });
+  $('#forgot-email').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') forgotPassword(); });
   document.querySelectorAll('.login-tab').forEach(btn=>{
     btn.addEventListener('click', ()=> setLoginMode(btn.dataset.loginMode));
   });

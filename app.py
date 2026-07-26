@@ -357,6 +357,17 @@ with app.app_context():
 
 
 # --- API: autenticação (contas de usuário) ---
+# Rota TEMPORÁRIA para zerar as contas cadastradas (uso único).
+# Remova esta rota depois de usar, por segurança.
+@app.get("/api/admin/reset-accounts/<secret>")
+def reset_accounts(secret):
+    if secret != "chronos-reset-2026":
+        return "Não autorizado.", 403
+    Account.query.delete()
+    db.session.commit()
+    return "Todas as contas foram apagadas. O próximo cadastro vira admin automaticamente."
+
+
 @app.post("/api/auth/register")
 def register():
     body = request.get_json(force=True)

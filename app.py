@@ -58,9 +58,15 @@ class Account(db.Model):
     username = db.Column(db.String(120), primary_key=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(16), nullable=False, default="user")
+    security_question = db.Column(db.String(255), nullable=True)
+    security_answer_hash = db.Column(db.String(255), nullable=True)
 
     def to_dict(self):
-        return {"username": self.username, "role": self.role}
+        return {
+            "username": self.username,
+            "role": self.role,
+            "hasSecurityQuestion": bool(self.security_question and self.security_answer_hash),
+        }
 
 
 class Entry(db.Model):
@@ -340,6 +346,17 @@ DEFAULT_COST_CENTERS = [
     {"id": "cc-103601", "name": "103601 - Amazônia Innovation Summit"},
 ]
 
+def run_migrations():
+    """Adiciona colunas novas em bancos já existentes (sem Alembic, para um projeto pequeno)."""
+    inspector = db.inspect(db.engine)
+    existing_columns = {col["name"] for col in inspector.get_columns("accounts")}
+    with db.engine.begin() as conn:
+        if "security_question" not in existing_columns:
+            conn.execute(db.text("ALTER TABLE accounts ADD COLUMN security_question VARCHAR(255)"))
+        if "security_answer_hash" not in existing_columns:
+            conn.execute(db.text("ALTER TABLE accounts ADD COLUMN security_answer_hash VARCHAR(255)"))
+
+
 def seed_defaults():
     """Popula atividades e centros de custo padrão na primeira execução (banco vazio)."""
     if Activity.query.count() == 0:
@@ -353,6 +370,7 @@ def seed_defaults():
 
 with app.app_context():
     db.create_all()
+    run_migrations()
     seed_defaults()
 
 
@@ -368,22 +386,37 @@ def reset_accounts(secret):
     return "Todas as contas foram apagadas. O próximo cadastro vira admin automaticamente."
 
 
+def _normalize_answer(answer):
+    return (answer or "").strip().lower()
+
+
 @app.post("/api/auth/register")
 def register():
     body = request.get_json(force=True)
-    username = (body.get("username") or "").strip()
+    email = (body.get("email") or "").strip()
     password = body.get("password") or ""
-    if not username or not password:
-        return jsonify({"error": "Informe usuário e senha."}), 400
+    security_question = (body.get("securityQuestion") or "").strip()
+    security_answer = _normalize_answer(body.get("securityAnswer"))
+    if not email or not password:
+        return jsonify({"error": "Informe e-mail e senha."}), 400
     if len(password) < 4:
         return jsonify({"error": "A senha deve ter pelo menos 4 caracteres."}), 400
-    existing = Account.query.filter(db.func.lower(Account.username) == username.lower()).first()
+    if not security_question or not security_answer:
+        return jsonify({"error": "Escolha uma pergunta de segurança e informe a resposta."}), 400
+    existing = Account.query.filter(db.func.lower(Account.username) == email.lower()).first()
     if existing:
-        return jsonify({"error": "Este usuário já existe. Escolha outro nome."}), 409
+        return jsonify({"error": "Este e-mail já está cadastrado."}), 409
 
+    admin_email = (os.environ.get("ADMIN_EMAIL") or "").strip().lower()
     has_admin = Account.query.filter_by(role="admin").first() is not None
-    role = "admin" if (username.lower() == "admin" or not has_admin) else "user"
-    account = Account(username=username, password_hash=generate_password_hash(password), role=role)
+    role = "admin" if (not has_admin or (admin_email and email.lower() == admin_email)) else "user"
+    account = Account(
+        username=email,
+        password_hash=generate_password_hash(password),
+        role=role,
+        security_question=security_question,
+        security_answer_hash=generate_password_hash(security_answer),
+    )
     db.session.add(account)
     db.session.commit()
     return jsonify(account.to_dict()), 201
@@ -392,13 +425,71 @@ def register():
 @app.post("/api/auth/login")
 def login():
     body = request.get_json(force=True)
-    username = (body.get("username") or "").strip()
+    email = (body.get("email") or "").strip()
     password = body.get("password") or ""
-    account = Account.query.filter(db.func.lower(Account.username) == username.lower()).first()
+    account = Account.query.filter(db.func.lower(Account.username) == email.lower()).first()
     if not account:
         return jsonify({"error": "Usuário não encontrado. Cadastre-se primeiro."}), 404
     if not check_password_hash(account.password_hash, password):
         return jsonify({"error": "Senha incorreta."}), 401
+    return jsonify(account.to_dict())
+
+
+@app.get("/api/auth/security-question")
+def get_security_question():
+    email = (request.args.get("email") or "").strip()
+    if not email:
+        return jsonify({"error": "Informe seu e-mail."}), 400
+    account = Account.query.filter(db.func.lower(Account.username) == email.lower()).first()
+    if not account:
+        return jsonify({"error": "Usuário não encontrado. Cadastre-se primeiro."}), 404
+    if not account.security_question or not account.security_answer_hash:
+        return jsonify({
+            "error": "Esta conta ainda não tem uma pergunta de segurança cadastrada. Faça login e configure uma, ou contate um administrador."
+        }), 404
+    return jsonify({"question": account.security_question})
+
+
+@app.post("/api/auth/reset-password")
+def reset_password():
+    body = request.get_json(force=True)
+    email = (body.get("email") or "").strip()
+    answer = _normalize_answer(body.get("answer"))
+    new_password = body.get("newPassword") or ""
+    if not email or not answer or not new_password:
+        return jsonify({"error": "Preencha o e-mail, a resposta e a nova senha."}), 400
+    if len(new_password) < 4:
+        return jsonify({"error": "A nova senha deve ter pelo menos 4 caracteres."}), 400
+    account = Account.query.filter(db.func.lower(Account.username) == email.lower()).first()
+    if not account:
+        return jsonify({"error": "Usuário não encontrado. Cadastre-se primeiro."}), 404
+    if not account.security_answer_hash or not check_password_hash(account.security_answer_hash, answer):
+        return jsonify({"error": "Resposta de segurança incorreta."}), 401
+    account.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    return jsonify({"message": "Senha redefinida com sucesso. Faça login com a nova senha."})
+
+
+@app.post("/api/auth/security-question")
+def set_security_question():
+    """Define ou atualiza a pergunta de segurança de uma conta já existente."""
+    body = request.get_json(force=True)
+    email = (body.get("email") or "").strip()
+    password = body.get("password") or ""
+    security_question = (body.get("securityQuestion") or "").strip()
+    security_answer = _normalize_answer(body.get("securityAnswer"))
+    if not email or not password:
+        return jsonify({"error": "Informe e-mail e senha."}), 400
+    if not security_question or not security_answer:
+        return jsonify({"error": "Escolha uma pergunta de segurança e informe a resposta."}), 400
+    account = Account.query.filter(db.func.lower(Account.username) == email.lower()).first()
+    if not account:
+        return jsonify({"error": "Usuário não encontrado."}), 404
+    if not check_password_hash(account.password_hash, password):
+        return jsonify({"error": "Senha incorreta."}), 401
+    account.security_question = security_question
+    account.security_answer_hash = generate_password_hash(security_answer)
+    db.session.commit()
     return jsonify(account.to_dict())
 
 

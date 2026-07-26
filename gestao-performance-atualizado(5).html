@@ -521,10 +521,23 @@
         <button class="link-button" id="btnForgotPassword" type="button">Esqueci minha senha</button>
       </div>
       <div class="forgot-password-form hidden" id="forgotPasswordPanel">
-        <label for="forgot-email">E-mail cadastrado</label>
-        <input id="forgot-email" type="email" placeholder="seu@email.com" autocomplete="email">
-        <div class="login-actions">
-          <button class="btn ghost small" id="btnResetPassword" type="button">Enviar senha temporária</button>
+        <div id="forgotStepEmail">
+          <label for="forgot-email">E-mail cadastrado</label>
+          <input id="forgot-email" type="email" placeholder="seu@email.com" autocomplete="email">
+          <div class="login-actions">
+            <button class="btn ghost small" id="btnForgotContinue" type="button">Continuar</button>
+          </div>
+        </div>
+        <div class="hidden" id="forgotStepAnswer">
+          <label id="forgotQuestionLabel" for="forgot-answer">Pergunta de segurança</label>
+          <input id="forgot-answer" type="text" placeholder="Sua resposta" autocomplete="off">
+          <label for="forgot-new-pass" style="margin-top:6px;">Nova senha</label>
+          <input id="forgot-new-pass" type="password" placeholder="Nova senha" autocomplete="new-password">
+          <label for="forgot-new-pass-confirm">Confirme a nova senha</label>
+          <input id="forgot-new-pass-confirm" type="password" placeholder="Repita a nova senha" autocomplete="new-password">
+          <div class="login-actions">
+            <button class="btn ghost small" id="btnResetPassword" type="button">Redefinir senha</button>
+          </div>
         </div>
         <div class="login-error" id="forgotError"></div>
       </div>
@@ -547,11 +560,59 @@
         <label for="register-pass-confirm">Confirme a senha</label>
         <input id="register-pass-confirm" type="password" placeholder="Repita a senha" autocomplete="new-password">
       </div>
+      <div>
+        <label for="register-security-question">Pergunta de segurança</label>
+        <select id="register-security-question">
+          <option value="">Selecione uma pergunta</option>
+          <option value="Qual o nome do seu primeiro animal de estimação?">Qual o nome do seu primeiro animal de estimação?</option>
+          <option value="Qual a cidade onde você nasceu?">Qual a cidade onde você nasceu?</option>
+          <option value="Qual o nome de solteira da sua mãe?">Qual o nome de solteira da sua mãe?</option>
+          <option value="Qual foi o nome da sua primeira escola?">Qual foi o nome da sua primeira escola?</option>
+          <option value="Qual o seu prato de comida favorito?">Qual o seu prato de comida favorito?</option>
+        </select>
+      </div>
+      <div>
+        <label for="register-security-answer">Resposta</label>
+        <input id="register-security-answer" type="text" placeholder="Sua resposta" autocomplete="off">
+      </div>
+      <div class="login-footer" style="margin:-6px 0 0;">Isso substitui a recuperação por e-mail: use essa pergunta para redefinir sua senha sozinho, na hora.</div>
       <div class="login-error" id="registerError"></div>
       <div class="login-actions">
         <button class="btn" id="btnRegister" type="button">Cadastrar</button>
       </div>
       <div class="login-footer">Ao cadastrar, você poderá entrar com este e-mail no próximo acesso.</div>
+    </div>
+  </div>
+</div>
+<div class="login-screen hidden" id="securityQuestionScreen">
+  <div class="login-card">
+    <h1 style="font-size:24px;">Configure sua recuperação de senha</h1>
+    <p>Sua conta ainda não tem uma pergunta de segurança. Configure agora para conseguir redefinir sua senha sozinho, sem precisar de e-mail, caso esqueça.</p>
+    <div class="login-form">
+      <div>
+        <label for="setup-security-question">Pergunta de segurança</label>
+        <select id="setup-security-question">
+          <option value="">Selecione uma pergunta</option>
+          <option value="Qual o nome do seu primeiro animal de estimação?">Qual o nome do seu primeiro animal de estimação?</option>
+          <option value="Qual a cidade onde você nasceu?">Qual a cidade onde você nasceu?</option>
+          <option value="Qual o nome de solteira da sua mãe?">Qual o nome de solteira da sua mãe?</option>
+          <option value="Qual foi o nome da sua primeira escola?">Qual foi o nome da sua primeira escola?</option>
+          <option value="Qual o seu prato de comida favorito?">Qual o seu prato de comida favorito?</option>
+        </select>
+      </div>
+      <div>
+        <label for="setup-security-answer">Resposta</label>
+        <input id="setup-security-answer" type="text" placeholder="Sua resposta" autocomplete="off">
+      </div>
+      <div>
+        <label for="setup-security-password">Confirme sua senha atual</label>
+        <input id="setup-security-password" type="password" placeholder="Senha atual" autocomplete="current-password">
+      </div>
+      <div class="login-error" id="securitySetupError"></div>
+      <div class="login-actions" style="display:flex;justify-content:space-between;align-items:center;">
+        <button class="link-button" id="btnSkipSecuritySetup" type="button">Configurar depois</button>
+        <button class="btn" id="btnSaveSecuritySetup" type="button">Salvar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -907,14 +968,21 @@
     errorEl.style.display = message ? 'block' : 'none';
   }
 
+  let forgotEmail = '';
+
   function setForgotPasswordVisible(show){
     const panel = $('#forgotPasswordPanel');
     if(panel){
       panel.classList.toggle('hidden', !show);
     }
-    if(!show){
-      setForgotError('');
-    }
+    setForgotError('');
+    forgotEmail = '';
+    $('#forgotStepEmail').classList.remove('hidden');
+    $('#forgotStepAnswer').classList.add('hidden');
+    $('#forgot-email').value = '';
+    $('#forgot-answer').value = '';
+    $('#forgot-new-pass').value = '';
+    $('#forgot-new-pass-confirm').value = '';
   }
 
   function getLoggedUser(){
@@ -1063,6 +1131,7 @@
       renderUserState();
       toast(`Bem-vindo, ${account.username}!`);
       await loadData();
+      maybeShowSecurityQuestionSetup(account);
     }catch(e){
       setLoginError(e.message);
     }
@@ -1072,6 +1141,8 @@
     const email = $('#register-user').value.trim();
     const password = $('#register-pass').value;
     const confirm = $('#register-pass-confirm').value;
+    const securityQuestion = $('#register-security-question').value;
+    const securityAnswer = $('#register-security-answer').value.trim();
     if(!email || !password || !confirm){
       setRegisterError('Informe e-mail e ambas as senhas.');
       return;
@@ -1084,8 +1155,12 @@
       setRegisterError('As senhas não coincidem.');
       return;
     }
+    if(!securityQuestion || !securityAnswer){
+      setRegisterError('Escolha uma pergunta de segurança e informe a resposta.');
+      return;
+    }
     try{
-      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password})});
+      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password, securityQuestion, securityAnswer})});
       setRegisterError('');
       setLoggedUser(account.username);
       localStorage.setItem(ROLE_KEY, account.role);
@@ -1098,18 +1173,89 @@
     }
   }
 
-  async function forgotPassword(){
+  async function forgotContinue(){
     const email = $('#forgot-email').value.trim();
     if(!email){
       setForgotError('Informe seu e-mail para recuperar a senha.');
       return;
     }
     try{
-      const result = await apiRequest('/api/auth/forgot-password', {method:'POST', body: JSON.stringify({email})});
-      setForgotError(result.message || 'Verifique seu e-mail.');
-      toast(result.message || 'Verifique seu e-mail.');
+      const result = await apiRequest('/api/auth/security-question?email=' + encodeURIComponent(email));
+      setForgotError('');
+      forgotEmail = email;
+      $('#forgotQuestionLabel').textContent = result.question;
+      $('#forgotStepEmail').classList.add('hidden');
+      $('#forgotStepAnswer').classList.remove('hidden');
+      $('#forgot-answer').focus();
     }catch(e){
       setForgotError(e.message);
+    }
+  }
+
+  async function resetPassword(){
+    const answer = $('#forgot-answer').value.trim();
+    const newPassword = $('#forgot-new-pass').value;
+    const confirm = $('#forgot-new-pass-confirm').value;
+    if(!answer || !newPassword || !confirm){
+      setForgotError('Responda a pergunta e informe a nova senha nos dois campos.');
+      return;
+    }
+    if(newPassword.length < 4){
+      setForgotError('A nova senha deve ter pelo menos 4 caracteres.');
+      return;
+    }
+    if(newPassword !== confirm){
+      setForgotError('As senhas não coincidem.');
+      return;
+    }
+    try{
+      const result = await apiRequest('/api/auth/reset-password', {method:'POST', body: JSON.stringify({email: forgotEmail, answer, newPassword})});
+      toast(result.message || 'Senha redefinida com sucesso.');
+      setForgotPasswordVisible(false);
+      setLoginMode('login');
+      $('#login-user').value = forgotEmail;
+    }catch(e){
+      setForgotError(e.message);
+    }
+  }
+
+  function showSecurityQuestionSetup(show){
+    const screen = $('#securityQuestionScreen');
+    if(screen) screen.classList.toggle('hidden', !show);
+    if(!show){
+      $('#securitySetupError').textContent = '';
+      $('#securitySetupError').style.display = 'none';
+      $('#setup-security-question').value = '';
+      $('#setup-security-answer').value = '';
+      $('#setup-security-password').value = '';
+    }
+  }
+
+  function maybeShowSecurityQuestionSetup(account){
+    if(account && account.hasSecurityQuestion === false){
+      showSecurityQuestionSetup(true);
+    }
+  }
+
+  async function saveSecurityQuestionSetup(){
+    const errorEl = $('#securitySetupError');
+    const securityQuestion = $('#setup-security-question').value;
+    const securityAnswer = $('#setup-security-answer').value.trim();
+    const password = $('#setup-security-password').value;
+    const email = getLoggedUser();
+    if(!securityQuestion || !securityAnswer || !password){
+      errorEl.textContent = 'Preencha a pergunta, a resposta e sua senha atual.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    try{
+      await apiRequest('/api/auth/security-question', {method:'POST', body: JSON.stringify({email, password, securityQuestion, securityAnswer})});
+      errorEl.style.display = 'none';
+      showSecurityQuestionSetup(false);
+      toast('Pergunta de segurança configurada com sucesso.');
+    }catch(e){
+      errorEl.textContent = e.message;
+      errorEl.style.display = 'block';
     }
   }
 
@@ -2040,10 +2186,15 @@
   $('#btnLogin').addEventListener('click', login);
   $('#btnRegister').addEventListener('click', register);
   $('#btnForgotPassword').addEventListener('click', ()=> setForgotPasswordVisible(true));
-  $('#btnResetPassword').addEventListener('click', forgotPassword);
+  $('#btnForgotContinue').addEventListener('click', forgotContinue);
+  $('#btnResetPassword').addEventListener('click', resetPassword);
+  $('#btnSaveSecuritySetup').addEventListener('click', saveSecurityQuestionSetup);
+  $('#btnSkipSecuritySetup').addEventListener('click', ()=> showSecurityQuestionSetup(false));
   $('#login-pass').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') login(); });
   $('#register-pass-confirm').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') register(); });
-  $('#forgot-email').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') forgotPassword(); });
+  $('#register-security-answer').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') register(); });
+  $('#forgot-email').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') forgotContinue(); });
+  $('#forgot-new-pass-confirm').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') resetPassword(); });
   document.querySelectorAll('.login-tab').forEach(btn=>{
     btn.addEventListener('click', ()=> setLoginMode(btn.dataset.loginMode));
   });

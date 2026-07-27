@@ -1,3 +1,4 @@
+import hmac
 import os
 import secrets
 import uuid
@@ -467,9 +468,12 @@ def register():
 
     # Vira admin só quem souber o código secreto configurado em
     # ADMIN_REGISTRATION_CODE (variável de ambiente, nunca no código-fonte).
-    # Não existe mais "primeiro usuário vira admin automaticamente".
+    # Não existe mais "primeiro usuário vira admin automaticamente", nem
+    # qualquer outra rota que permita alterar o role de uma conta depois de
+    # criada — comparação em tempo constante para não vazar o código por
+    # análise de tempo de resposta.
     expected_admin_code = (os.environ.get("ADMIN_REGISTRATION_CODE") or "").strip()
-    role = "admin" if (expected_admin_code and admin_code == expected_admin_code) else "user"
+    role = "admin" if (expected_admin_code and hmac.compare_digest(admin_code, expected_admin_code)) else "user"
     account = Account(
         username=email,
         password_hash=generate_password_hash(password),

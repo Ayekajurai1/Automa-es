@@ -1,9 +1,12 @@
 import os
+import secrets
 import uuid
+from functools import wraps
 from pathlib import Path
 
 from flask import Flask, jsonify, request, send_file
 from flask_sqlalchemy import SQLAlchemy
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
 
 BASE_DIR = Path(__file__).parent
@@ -12,9 +15,19 @@ HTML_FILE = BASE_DIR / "gestao-performance-atualizado(5).html"
 app = Flask(__name__)
 
 # --- Configuração do banco de dados ---
-# Em produção (Render/Railway), defina a variável de ambiente DATABASE_URL
-# (Postgres). Localmente, sem essa variável, usa um arquivo SQLite (chronos.db).
-database_url = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'chronos.db'}")
+# Em produção (Render/Railway/Vercel), defina a variável de ambiente DATABASE_URL
+# (Postgres) — obrigatório para os dados serem compartilhados entre a equipe.
+# Localmente, sem essa variável, usa um arquivo SQLite (chronos.db).
+#
+# Em serverless (Vercel), o sistema de arquivos do projeto é somente leitura;
+# só /tmp aceita escrita. Sem DATABASE_URL configurada, o SQLite cai em /tmp
+# para não derrubar a função — mas os dados NÃO persistem entre execuções,
+# então configure DATABASE_URL com um Postgres para uso real em produção.
+if os.environ.get("VERCEL"):
+    default_sqlite_path = "/tmp/chronos.db"
+else:
+    default_sqlite_path = str(BASE_DIR / "chronos.db")
+database_url = os.environ.get("DATABASE_URL", f"sqlite:///{default_sqlite_path}")
 # Render/Heroku fornecem a URL como "postgres://", mas o SQLAlchemy/psycopg exige "postgresql://"
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -22,6 +35,14 @@ if database_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
+# --- Autenticação por token ---
+# Em produção, defina SECRET_KEY como variável de ambiente fixa: sem ela, uma
+# chave aleatória é gerada a cada início do processo e, em serverless (cold
+# starts frequentes), os usuários seriam deslogados com frequência.
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
+token_serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="chronos-auth")
+TOKEN_MAX_AGE = 60 * 60 * 12  # 12 horas
 
 
 # --- Modelos ---
@@ -375,19 +396,55 @@ with app.app_context():
 
 
 # --- API: autenticação (contas de usuário) ---
-# Rota TEMPORÁRIA para zerar as contas cadastradas (uso único).
-# Remova esta rota depois de usar, por segurança.
+# Rota TEMPORÁRIA para zerar as contas cadastradas (uso único), protegida por
+# variável de ambiente (não hardcoded) para não ficar exposta no código-fonte
+# público. Remova esta rota depois de usar.
 @app.get("/api/admin/reset-accounts/<secret>")
 def reset_accounts(secret):
-    if secret != "chronos-reset-2026":
+    expected_secret = os.environ.get("ADMIN_RESET_SECRET")
+    if not expected_secret or secret != expected_secret:
         return "Não autorizado.", 403
     Account.query.delete()
     db.session.commit()
-    return "Todas as contas foram apagadas. O próximo cadastro vira admin automaticamente."
+    return "Todas as contas foram apagadas."
 
 
 def _normalize_answer(answer):
     return (answer or "").strip().lower()
+
+
+def _generate_token(username):
+    return token_serializer.dumps({"username": username})
+
+
+def _get_authenticated_account():
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header[len("Bearer "):]
+    try:
+        data = token_serializer.loads(token, max_age=TOKEN_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
+    username = data.get("username")
+    if not username:
+        return None
+    return Account.query.filter(db.func.lower(Account.username) == username.lower()).first()
+
+
+def admin_required(view_fn):
+    """Exige um token válido (Authorization: Bearer <token>) de uma conta admin.
+
+    O token é emitido pelo servidor só após login/registro com senha correta,
+    então não pode ser forjado por quem não conhece a senha da conta admin.
+    """
+    @wraps(view_fn)
+    def wrapper(*args, **kwargs):
+        account = _get_authenticated_account()
+        if not account or account.role != "admin":
+            return jsonify({"error": "Apenas administradores podem realizar esta ação."}), 403
+        return view_fn(*args, **kwargs)
+    return wrapper
 
 
 @app.post("/api/auth/register")
@@ -397,6 +454,7 @@ def register():
     password = body.get("password") or ""
     security_question = (body.get("securityQuestion") or "").strip()
     security_answer = _normalize_answer(body.get("securityAnswer"))
+    admin_code = (body.get("adminCode") or "").strip()
     if not email or not password:
         return jsonify({"error": "Informe e-mail e senha."}), 400
     if len(password) < 4:
@@ -407,9 +465,11 @@ def register():
     if existing:
         return jsonify({"error": "Este e-mail já está cadastrado."}), 409
 
-    admin_email = (os.environ.get("ADMIN_EMAIL") or "").strip().lower()
-    has_admin = Account.query.filter_by(role="admin").first() is not None
-    role = "admin" if (not has_admin or (admin_email and email.lower() == admin_email)) else "user"
+    # Vira admin só quem souber o código secreto configurado em
+    # ADMIN_REGISTRATION_CODE (variável de ambiente, nunca no código-fonte).
+    # Não existe mais "primeiro usuário vira admin automaticamente".
+    expected_admin_code = (os.environ.get("ADMIN_REGISTRATION_CODE") or "").strip()
+    role = "admin" if (expected_admin_code and admin_code == expected_admin_code) else "user"
     account = Account(
         username=email,
         password_hash=generate_password_hash(password),
@@ -419,7 +479,7 @@ def register():
     )
     db.session.add(account)
     db.session.commit()
-    return jsonify(account.to_dict()), 201
+    return jsonify({**account.to_dict(), "token": _generate_token(account.username)}), 201
 
 
 @app.post("/api/auth/login")
@@ -432,7 +492,7 @@ def login():
         return jsonify({"error": "Usuário não encontrado. Cadastre-se primeiro."}), 404
     if not check_password_hash(account.password_hash, password):
         return jsonify({"error": "Senha incorreta."}), 401
-    return jsonify(account.to_dict())
+    return jsonify({**account.to_dict(), "token": _generate_token(account.username)})
 
 
 @app.get("/api/auth/security-question")
@@ -551,8 +611,9 @@ def delete_entry(entry_id):
     return "", 204
 
 
-# --- API: atividades ---
+# --- API: atividades (Cadastros — somente admin) ---
 @app.post("/api/activities")
+@admin_required
 def create_activity():
     body = request.get_json(force=True)
     activity = Activity(
@@ -566,6 +627,7 @@ def create_activity():
 
 
 @app.delete("/api/activities/<activity_id>")
+@admin_required
 def delete_activity(activity_id):
     activity = Activity.query.get_or_404(activity_id)
     db.session.delete(activity)
@@ -573,8 +635,9 @@ def delete_activity(activity_id):
     return "", 204
 
 
-# --- API: centros de custo ---
+# --- API: centros de custo (Cadastros — somente admin) ---
 @app.post("/api/cost-centers")
+@admin_required
 def create_cost_center():
     body = request.get_json(force=True)
     cc_id = body.get("id")
@@ -589,6 +652,7 @@ def create_cost_center():
 
 
 @app.delete("/api/cost-centers/<cost_center_id>")
+@admin_required
 def delete_cost_center(cost_center_id):
     cost_center = CostCenter.query.get_or_404(cost_center_id)
     db.session.delete(cost_center)
@@ -596,8 +660,9 @@ def delete_cost_center(cost_center_id):
     return "", 204
 
 
-# --- API: colaboradores ---
+# --- API: colaboradores (Cadastros — somente admin) ---
 @app.post("/api/collaborators")
+@admin_required
 def create_collaborator():
     body = request.get_json(force=True)
     collab_id = body.get("id") or str(uuid.uuid4())
@@ -610,6 +675,7 @@ def create_collaborator():
 
 
 @app.delete("/api/collaborators/<collaborator_id>")
+@admin_required
 def delete_collaborator(collaborator_id):
     collaborator = Collaborator.query.get_or_404(collaborator_id)
     db.session.delete(collaborator)

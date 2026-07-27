@@ -12,9 +12,19 @@ HTML_FILE = BASE_DIR / "gestao-performance-atualizado(5).html"
 app = Flask(__name__)
 
 # --- Configuração do banco de dados ---
-# Em produção (Render/Railway), defina a variável de ambiente DATABASE_URL
-# (Postgres). Localmente, sem essa variável, usa um arquivo SQLite (chronos.db).
-database_url = os.environ.get("DATABASE_URL", f"sqlite:///{BASE_DIR / 'chronos.db'}")
+# Em produção (Render/Railway/Vercel), defina a variável de ambiente DATABASE_URL
+# (Postgres) — obrigatório para os dados serem compartilhados entre a equipe.
+# Localmente, sem essa variável, usa um arquivo SQLite (chronos.db).
+#
+# Em serverless (Vercel), o sistema de arquivos do projeto é somente leitura;
+# só /tmp aceita escrita. Sem DATABASE_URL configurada, o SQLite cai em /tmp
+# para não derrubar a função — mas os dados NÃO persistem entre execuções,
+# então configure DATABASE_URL com um Postgres para uso real em produção.
+if os.environ.get("VERCEL"):
+    default_sqlite_path = "/tmp/chronos.db"
+else:
+    default_sqlite_path = str(BASE_DIR / "chronos.db")
+database_url = os.environ.get("DATABASE_URL", f"sqlite:///{default_sqlite_path}")
 # Render/Heroku fornecem a URL como "postgres://", mas o SQLAlchemy/psycopg exige "postgresql://"
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)

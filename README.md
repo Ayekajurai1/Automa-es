@@ -38,6 +38,28 @@ no plano gratuito.
 5. Faça o deploy. Na primeira execução, o app cria as tabelas e já popula as
    atividades e os 239 centros de custo padrão automaticamente.
 
+### Passo a passo no Vercel
+
+⚠️ Na Vercel, o sistema de arquivos das funções é **somente leitura** (exceto
+`/tmp`, que não é persistente). Isso quer dizer que **é obrigatório** configurar
+um Postgres externo (ex.: Neon, Supabase ou Vercel Postgres) — sem isso, os
+dados se perdem a cada nova execução da função e o app não cumpre a proposta
+de dados compartilhados. Sem `DATABASE_URL`, o app também evita crashar
+caindo num SQLite temporário em `/tmp`, mas isso é só uma rede de segurança,
+não uma solução de produção.
+
+1. Crie um banco Postgres (ex.: [Neon](https://neon.tech) ou
+   [Vercel Postgres](https://vercel.com/storage/postgres)) e copie a connection
+   string.
+2. Importe este repositório em [vercel.com/new](https://vercel.com/new).
+   A Vercel detecta o `app.py` (variável `app` do Flask) automaticamente —
+   não é necessário configurar Build/Start command.
+3. Em **Project Settings → Environment Variables**, adicione:
+   - `DATABASE_URL` = (a connection string do Postgres)
+4. Faça o deploy (ou re-deploy, se o projeto já existia). Na primeira
+   execução, o app cria as tabelas e popula atividades e centros de custo
+   automaticamente.
+
 ### Primeiro acesso
 
 O primeiro usuário a se cadastrar na tela de login vira **admin**

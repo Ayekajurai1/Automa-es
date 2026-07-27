@@ -576,6 +576,10 @@
         <input id="register-security-answer" type="text" placeholder="Sua resposta" autocomplete="off">
       </div>
       <div class="login-footer" style="margin:-6px 0 0;">Isso substitui a recuperação por e-mail: use essa pergunta para redefinir sua senha sozinho, na hora.</div>
+      <div class="hidden" id="registerAdminCodeWrap">
+        <label for="register-admin-code">Código de administrador</label>
+        <input id="register-admin-code" type="password" placeholder="Código secreto" autocomplete="off">
+      </div>
       <div class="login-error" id="registerError"></div>
       <div class="login-actions">
         <button class="btn" id="btnRegister" type="button">Cadastrar</button>
@@ -945,8 +949,12 @@
   // via esta API. localStorage continua sendo usado só para preferências pessoais
   // do navegador (tema, sessão de login local, cronômetro em andamento).
   async function apiRequest(path, options){
+    const token = localStorage.getItem(TOKEN_KEY);
     const res = await fetch(path, {
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? {'Authorization': 'Bearer ' + token} : {}),
+      },
       ...options,
     });
     if(!res.ok){
@@ -960,6 +968,7 @@
 
   const LOGIN_KEY = 'chronos-user';
   const ROLE_KEY = 'chronos-role';
+  const TOKEN_KEY = 'chronos-token';
   let loginMode = 'login';
 
   function setForgotError(message){
@@ -1091,6 +1100,7 @@
   function logout(){
     localStorage.removeItem(LOGIN_KEY);
     localStorage.removeItem(ROLE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     showLoginScreen(true);
     setLoginMode('login');
     $('#login-user').value = '';
@@ -1127,6 +1137,7 @@
       setLoginError('');
       setLoggedUser(account.username);
       localStorage.setItem(ROLE_KEY, account.role);
+      localStorage.setItem(TOKEN_KEY, account.token);
       showLoginScreen(false);
       renderUserState();
       toast(`Bem-vindo, ${account.username}!`);
@@ -1143,6 +1154,7 @@
     const confirm = $('#register-pass-confirm').value;
     const securityQuestion = $('#register-security-question').value;
     const securityAnswer = $('#register-security-answer').value.trim();
+    const adminCode = $('#register-admin-code').value;
     if(!email || !password || !confirm){
       setRegisterError('Informe e-mail e ambas as senhas.');
       return;
@@ -1160,10 +1172,11 @@
       return;
     }
     try{
-      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password, securityQuestion, securityAnswer})});
+      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password, securityQuestion, securityAnswer, adminCode})});
       setRegisterError('');
       setLoggedUser(account.username);
       localStorage.setItem(ROLE_KEY, account.role);
+      localStorage.setItem(TOKEN_KEY, account.token);
       showLoginScreen(false);
       renderUserState();
       toast(`Conta criada e login efetuado como ${account.username}.`);
@@ -2200,6 +2213,8 @@
   });
 
   function initLogin(){
+    const params = new URLSearchParams(location.search);
+    $('#registerAdminCodeWrap').classList.toggle('hidden', !params.has('admin'));
     setLoginMode('login');
     renderUserState();
     if(getLoggedUser()){

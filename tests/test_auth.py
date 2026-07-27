@@ -30,41 +30,90 @@ def client():
         db.drop_all()
 
 
+def _register(client, email, password='1234', **extra):
+    payload = {
+        'email': email,
+        'password': password,
+        'securityQuestion': 'Qual a cidade onde você nasceu?',
+        'securityAnswer': 'Manaus',
+    }
+    payload.update(extra)
+    return client.post('/api/auth/register', json=payload)
+
+
 def test_register_login_and_password_reset(client):
-    register_response = client.post('/api/auth/register', json={
-        'email': 'ana@teste.com',
-        'password': '1234'
-    })
+    register_response = _register(client, 'ana@teste.com')
     assert register_response.status_code == 201
-    assert register_response.get_json()['username'] == 'ana@teste.com'
+    body = register_response.get_json()
+    assert body['username'] == 'ana@teste.com'
+    assert body['role'] == 'user'
+    assert body['token']
 
     login_response = client.post('/api/auth/login', json={
         'email': 'ana@teste.com',
         'password': '1234'
     })
     assert login_response.status_code == 200
+    assert login_response.get_json()['token']
 
-    reset_response = client.post('/api/auth/forgot-password', json={
-        'email': 'ana@teste.com'
+    question_response = client.get('/api/auth/security-question?email=ana@teste.com')
+    assert question_response.status_code == 200
+    assert 'nasceu' in question_response.get_json()['question'].lower()
+
+    reset_response = client.post('/api/auth/reset-password', json={
+        'email': 'ana@teste.com',
+        'answer': 'Manaus',
+        'newPassword': '5678',
     })
     assert reset_response.status_code == 200
-    body = reset_response.get_json()
-    assert 'temporária' in body['message'].lower()
 
 
-def test_configured_admin_email_is_assigned_admin_role(client, monkeypatch):
-    monkeypatch.setenv('ADMIN_EMAIL', 'admin@teste.com')
+def test_registration_without_admin_code_is_always_user_role(client, monkeypatch):
+    monkeypatch.setenv('ADMIN_REGISTRATION_CODE', 'segredo-super-secreto')
 
-    first_response = client.post('/api/auth/register', json={
-        'email': 'usuario@teste.com',
-        'password': '1234'
-    })
+    first_response = _register(client, 'usuario1@teste.com')
     assert first_response.status_code == 201
-    assert first_response.get_json()['role'] == 'admin'
+    assert first_response.get_json()['role'] == 'user'
 
-    second_response = client.post('/api/auth/register', json={
-        'email': 'admin@teste.com',
-        'password': '1234'
-    })
+    second_response = _register(client, 'usuario2@teste.com')
     assert second_response.status_code == 201
-    assert second_response.get_json()['role'] == 'admin'
+    assert second_response.get_json()['role'] == 'user'
+
+
+def test_registration_with_correct_admin_code_grants_admin_role(client, monkeypatch):
+    monkeypatch.setenv('ADMIN_REGISTRATION_CODE', 'segredo-super-secreto')
+
+    response = _register(client, 'karina@teste.com', adminCode='segredo-super-secreto')
+    assert response.status_code == 201
+    assert response.get_json()['role'] == 'admin'
+
+    wrong_code_response = _register(client, 'invasor@teste.com', adminCode='chute-errado')
+    assert wrong_code_response.status_code == 201
+    assert wrong_code_response.get_json()['role'] == 'user'
+
+
+def test_only_admin_token_can_manage_activities(client, monkeypatch):
+    monkeypatch.setenv('ADMIN_REGISTRATION_CODE', 'segredo-super-secreto')
+
+    admin_response = _register(client, 'admin@teste.com', adminCode='segredo-super-secreto')
+    admin_token = admin_response.get_json()['token']
+
+    user_response = _register(client, 'user@teste.com')
+    user_token = user_response.get_json()['token']
+
+    unauthenticated = client.post('/api/activities', json={'name': 'Nova atividade'})
+    assert unauthenticated.status_code == 403
+
+    as_user = client.post(
+        '/api/activities',
+        json={'name': 'Nova atividade'},
+        headers={'Authorization': f'Bearer {user_token}'},
+    )
+    assert as_user.status_code == 403
+
+    as_admin = client.post(
+        '/api/activities',
+        json={'name': 'Nova atividade'},
+        headers={'Authorization': f'Bearer {admin_token}'},
+    )
+    assert as_admin.status_code == 201

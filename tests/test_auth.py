@@ -68,6 +68,29 @@ def test_register_login_and_password_reset(client):
     assert reset_response.status_code == 200
 
 
+def test_registration_without_security_question_is_allowed(client):
+    response = client.post('/api/auth/register', json={
+        'email': 'sem-pergunta@teste.com',
+        'password': '1234',
+    })
+    assert response.status_code == 201
+    body = response.get_json()
+    assert body['hasSecurityQuestion'] is False
+    assert body['token']
+
+    question_response = client.get('/api/auth/security-question?email=sem-pergunta@teste.com')
+    assert question_response.status_code == 404
+
+
+def test_registration_with_only_one_security_field_is_rejected(client):
+    response = client.post('/api/auth/register', json={
+        'email': 'meio-cadastro@teste.com',
+        'password': '1234',
+        'securityQuestion': 'Qual a cidade onde você nasceu?',
+    })
+    assert response.status_code == 400
+
+
 def test_registration_without_admin_code_is_always_user_role(client, monkeypatch):
     monkeypatch.setenv('ADMIN_REGISTRATION_CODE', 'segredo-super-secreto')
 

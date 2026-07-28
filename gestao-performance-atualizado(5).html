@@ -560,22 +560,6 @@
         <label for="register-pass-confirm">Confirme a senha</label>
         <input id="register-pass-confirm" type="password" placeholder="Repita a senha" autocomplete="new-password">
       </div>
-      <div>
-        <label for="register-security-question">Pergunta de segurança</label>
-        <select id="register-security-question">
-          <option value="">Selecione uma pergunta</option>
-          <option value="Qual o nome do seu primeiro animal de estimação?">Qual o nome do seu primeiro animal de estimação?</option>
-          <option value="Qual a cidade onde você nasceu?">Qual a cidade onde você nasceu?</option>
-          <option value="Qual o nome de solteira da sua mãe?">Qual o nome de solteira da sua mãe?</option>
-          <option value="Qual foi o nome da sua primeira escola?">Qual foi o nome da sua primeira escola?</option>
-          <option value="Qual o seu prato de comida favorito?">Qual o seu prato de comida favorito?</option>
-        </select>
-      </div>
-      <div>
-        <label for="register-security-answer">Resposta</label>
-        <input id="register-security-answer" type="text" placeholder="Sua resposta" autocomplete="off">
-      </div>
-      <div class="login-footer" style="margin:-6px 0 0;">Isso substitui a recuperação por e-mail: use essa pergunta para redefinir sua senha sozinho, na hora.</div>
       <div class="hidden" id="registerAdminCodeWrap">
         <label for="register-admin-code">Código de administrador</label>
         <input id="register-admin-code" type="password" placeholder="Código secreto" autocomplete="off">
@@ -1168,8 +1152,6 @@
     const email = $('#register-user').value.trim();
     const password = $('#register-pass').value;
     const confirm = $('#register-pass-confirm').value;
-    const securityQuestion = $('#register-security-question').value;
-    const securityAnswer = $('#register-security-answer').value.trim();
     const adminCode = $('#register-admin-code').value;
     if(!email || !password || !confirm){
       setRegisterError('Informe e-mail e ambas as senhas.');
@@ -1183,12 +1165,8 @@
       setRegisterError('As senhas não coincidem.');
       return;
     }
-    if(!securityQuestion || !securityAnswer){
-      setRegisterError('Escolha uma pergunta de segurança e informe a resposta.');
-      return;
-    }
     try{
-      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password, securityQuestion, securityAnswer, adminCode})});
+      const account = await apiRequest('/api/auth/register', {method:'POST', body: JSON.stringify({email, password, adminCode})});
       setRegisterError('');
       setLoggedUser(account.username);
       localStorage.setItem(ROLE_KEY, account.role);
@@ -1197,6 +1175,7 @@
       renderUserState();
       toast(`Conta criada e login efetuado como ${account.username}.`);
       await loadData();
+      maybeShowSecurityQuestionSetup(account);
     }catch(e){
       setRegisterError(e.message);
     }
@@ -2257,7 +2236,6 @@
   $('#btnSkipSecuritySetup').addEventListener('click', ()=> showSecurityQuestionSetup(false));
   $('#login-pass').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') login(); });
   $('#register-pass-confirm').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') register(); });
-  $('#register-security-answer').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') register(); });
   $('#forgot-email').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') forgotContinue(); });
   $('#forgot-new-pass-confirm').addEventListener('keydown', (event)=>{ if(event.key === 'Enter') resetPassword(); });
   document.querySelectorAll('.login-tab').forEach(btn=>{

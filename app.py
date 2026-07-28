@@ -453,6 +453,9 @@ def register():
     body = request.get_json(force=True)
     email = (body.get("email") or "").strip()
     password = body.get("password") or ""
+    # Pergunta de segurança é opcional no cadastro: quem não configurar aqui
+    # pode configurar depois (tela pós-login) ou pedir para um admin
+    # redefinir a senha via /api/accounts/<username>/reset-password.
     security_question = (body.get("securityQuestion") or "").strip()
     security_answer = _normalize_answer(body.get("securityAnswer"))
     admin_code = (body.get("adminCode") or "").strip()
@@ -460,8 +463,8 @@ def register():
         return jsonify({"error": "Informe e-mail e senha."}), 400
     if len(password) < 4:
         return jsonify({"error": "A senha deve ter pelo menos 4 caracteres."}), 400
-    if not security_question or not security_answer:
-        return jsonify({"error": "Escolha uma pergunta de segurança e informe a resposta."}), 400
+    if bool(security_question) != bool(security_answer):
+        return jsonify({"error": "Informe a pergunta e a resposta de segurança, ou deixe as duas em branco."}), 400
     existing = Account.query.filter(db.func.lower(Account.username) == email.lower()).first()
     if existing:
         return jsonify({"error": "Este e-mail já está cadastrado."}), 409
@@ -478,8 +481,8 @@ def register():
         username=email,
         password_hash=generate_password_hash(password),
         role=role,
-        security_question=security_question,
-        security_answer_hash=generate_password_hash(security_answer),
+        security_question=security_question or None,
+        security_answer_hash=generate_password_hash(security_answer) if security_answer else None,
     )
     db.session.add(account)
     db.session.commit()

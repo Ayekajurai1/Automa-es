@@ -807,6 +807,22 @@
         <div class="card"><div class="activity-list" id="costList"></div></div>
       </div>
     </div>
+    <div class="card">
+      <h2>Redefinir senha de um usuário</h2>
+      <p class="sub">Sem servidor de e-mail configurado, quem esquecer a senha e a resposta de segurança precisa pedir para um administrador redefinir aqui.</p>
+      <div class="form-grid" style="grid-template-columns:1fr 1fr auto;">
+        <div>
+          <label for="reset-pass-user">Conta</label>
+          <select id="reset-pass-user"><option value="">Selecione um usuário</option></select>
+        </div>
+        <div>
+          <label for="reset-pass-new">Nova senha</label>
+          <input id="reset-pass-new" type="password" placeholder="Nova senha (mín. 4 caracteres)" autocomplete="new-password">
+        </div>
+        <button class="btn" id="btnResetUserPassword">Redefinir senha</button>
+      </div>
+      <div class="login-error" id="resetUserPasswordError"></div>
+    </div>
   </div>
 
   <!-- DASHBOARD -->
@@ -1299,6 +1315,7 @@
       btn.classList.add('active');
       $('#view-' + btn.dataset.view).classList.add('active');
       if(btn.dataset.view === 'dashboard') renderDashboard();
+      if(btn.dataset.view === 'cadastros' && isAdmin()) loadAccountsForReset();
     });
   });
 
@@ -1750,6 +1767,41 @@
     renderList('#collabList',data.collaborators,'data-delcolab');
     updateDatalists();
   }
+
+  function setResetUserPasswordError(message){
+    const errorEl = $('#resetUserPasswordError');
+    errorEl.textContent = message;
+    errorEl.style.display = message ? 'block' : 'none';
+  }
+
+  async function loadAccountsForReset(){
+    const select = $('#reset-pass-user');
+    if(!select) return;
+    try{
+      const accounts = await apiRequest('/api/accounts');
+      const current = select.value;
+      select.innerHTML = '<option value="">Selecione um usuário</option>' +
+        accounts.map(a=>`<option value="${escapeHtml(a.username)}">${escapeHtml(a.username)}${a.role==='admin' ? ' (admin)' : ''}</option>`).join('');
+      select.value = current;
+    }catch(e){
+      setResetUserPasswordError('Não foi possível carregar as contas: ' + e.message);
+    }
+  }
+
+  $('#btnResetUserPassword').addEventListener('click', async ()=>{
+    const username = $('#reset-pass-user').value;
+    const newPassword = $('#reset-pass-new').value;
+    setResetUserPasswordError('');
+    if(!username){ setResetUserPasswordError('Selecione uma conta.'); return; }
+    if(!newPassword || newPassword.length < 4){ setResetUserPasswordError('A nova senha deve ter pelo menos 4 caracteres.'); return; }
+    try{
+      await apiRequest(`/api/accounts/${encodeURIComponent(username)}/reset-password`, {method:'POST', body: JSON.stringify({newPassword})});
+      $('#reset-pass-new').value = '';
+      toast(`Senha de ${username} redefinida com sucesso.`);
+    }catch(e){
+      setResetUserPasswordError(e.message);
+    }
+  });
 
   function updateDatalists(){
     const colabList = $('#colabList');

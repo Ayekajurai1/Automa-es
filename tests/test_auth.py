@@ -117,3 +117,41 @@ def test_only_admin_token_can_manage_activities(client, monkeypatch):
         headers={'Authorization': f'Bearer {admin_token}'},
     )
     assert as_admin.status_code == 201
+
+
+def test_only_admin_can_reset_another_users_password(client, monkeypatch):
+    monkeypatch.setenv('ADMIN_REGISTRATION_CODE', 'segredo-super-secreto')
+
+    admin_response = _register(client, 'admin@teste.com', adminCode='segredo-super-secreto')
+    admin_token = admin_response.get_json()['token']
+
+    user_response = _register(client, 'esqueceu@teste.com', password='senha-antiga')
+    user_token = user_response.get_json()['token']
+
+    unauthenticated = client.post('/api/accounts/esqueceu@teste.com/reset-password', json={'newPassword': 'nova-senha'})
+    assert unauthenticated.status_code == 403
+
+    as_user = client.post(
+        '/api/accounts/esqueceu@teste.com/reset-password',
+        json={'newPassword': 'nova-senha'},
+        headers={'Authorization': f'Bearer {user_token}'},
+    )
+    assert as_user.status_code == 403
+
+    listing = client.get('/api/accounts', headers={'Authorization': f'Bearer {admin_token}'})
+    assert listing.status_code == 200
+    usernames = [a['username'] for a in listing.get_json()]
+    assert 'esqueceu@teste.com' in usernames
+
+    as_admin = client.post(
+        '/api/accounts/esqueceu@teste.com/reset-password',
+        json={'newPassword': 'nova-senha'},
+        headers={'Authorization': f'Bearer {admin_token}'},
+    )
+    assert as_admin.status_code == 200
+
+    old_password_login = client.post('/api/auth/login', json={'email': 'esqueceu@teste.com', 'password': 'senha-antiga'})
+    assert old_password_login.status_code == 401
+
+    new_password_login = client.post('/api/auth/login', json={'email': 'esqueceu@teste.com', 'password': 'nova-senha'})
+    assert new_password_login.status_code == 200

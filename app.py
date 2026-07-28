@@ -557,6 +557,32 @@ def set_security_question():
     return jsonify(account.to_dict())
 
 
+# --- API: gestão de contas (somente admin) ---
+# Sem servidor de e-mail configurado, a redefinição de senha para quem
+# esquece a resposta da pergunta de segurança é feita manualmente pelo
+# administrador, direto pela aba Cadastros.
+@app.get("/api/accounts")
+@admin_required
+def list_accounts():
+    accounts = Account.query.order_by(Account.username).all()
+    return jsonify([a.to_dict() for a in accounts])
+
+
+@app.post("/api/accounts/<username>/reset-password")
+@admin_required
+def admin_reset_password(username):
+    body = request.get_json(force=True)
+    new_password = body.get("newPassword") or ""
+    if len(new_password) < 4:
+        return jsonify({"error": "A nova senha deve ter pelo menos 4 caracteres."}), 400
+    account = Account.query.filter(db.func.lower(Account.username) == username.lower()).first()
+    if not account:
+        return jsonify({"error": "Usuário não encontrado."}), 404
+    account.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+    return jsonify({"message": f"Senha de {account.username} redefinida com sucesso."})
+
+
 # --- Página principal ---
 @app.get("/")
 def index():

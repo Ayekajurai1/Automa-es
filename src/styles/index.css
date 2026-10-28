@@ -1,0 +1,4 @@
+/* Ordem: design system → tema do Chronos → layout das telas. */
+@import './design-system/index.css';
+@import './theme.css';
+@import './layout.css';

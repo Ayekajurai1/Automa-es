@@ -5,15 +5,20 @@ import uuid
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, jsonify, request, send_file
+import jwt
+from flask import Flask, abort, g, jsonify, request, send_file, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
 
 BASE_DIR = Path(__file__).parent
 HTML_FILE = BASE_DIR / "gestao-performance-atualizado(5).html"
+# Frontend React compilado com "npm run build". Quando existe, tem prioridade
+# sobre o HTML antigo. Pode ser trocado pela variável FRONTEND_DIST.
+DIST_DIR = Path(os.environ.get("FRONTEND_DIST") or BASE_DIR / "dist")
 
-app = Flask(__name__)
+# static_folder=None: os arquivos do frontend são servidos pela rota abaixo.
+app = Flask(__name__, static_folder=None)
 
 # --- Configuração do banco de dados ---
 # Em produção (Render/Railway/Vercel), defina a variável de ambiente DATABASE_URL
@@ -44,6 +49,34 @@ db = SQLAlchemy(app)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 token_serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"], salt="chronos-auth")
 TOKEN_MAX_AGE = 60 * 60 * 12  # 12 horas
+
+# --- Login com Microsoft (Entra ID) ---
+# O frontend envia o ID token da Microsoft (Authorization: Bearer <token>) e a
+# API confere assinatura, validade, público (Client ID) e emissor (tenant da
+# FPFtech). Os valores são os mesmos do frontend; aceitamos também os nomes
+# VITE_* para facilitar o Docker, que usa os mesmos build args.
+AZURE_CLIENT_ID = (os.environ.get("AZURE_CLIENT_ID") or os.environ.get("VITE_AZURE_CLIENT_ID") or "").strip()
+AZURE_TENANT_ID = (os.environ.get("AZURE_TENANT_ID") or os.environ.get("VITE_AZURE_TENANT_ID") or "").strip()
+SSO_ENABLED = bool(AZURE_CLIENT_ID and AZURE_TENANT_ID)
+# E-mails (separados por vírgula) que têm papel de admin quando entram pelo SSO.
+ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
+# Modo demonstração: requisições sem token viram um usuário admin fictício.
+# Serve só para desenvolvimento sem SSO. Nunca ative em produção.
+DEMO_AUTH = os.environ.get("CHRONOS_DEMO_AUTH") == "1"
+DEMO_USER = {"email": "demo@chronos.local", "name": "Usuário demonstração", "role": "admin", "source": "demo"}
+
+_jwks_client = None
+
+
+def _get_jwks_client():
+    global _jwks_client
+    if _jwks_client is None:
+        _jwks_client = jwt.PyJWKClient(
+            f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/discovery/v2.0/keys",
+            cache_keys=True,
+            lifespan=3600,
+        )
+    return _jwks_client
 
 
 # --- Modelos ---
@@ -433,19 +466,77 @@ def _get_authenticated_account():
     return Account.query.filter(db.func.lower(Account.username) == username.lower()).first()
 
 
-def admin_required(view_fn):
-    """Exige um token válido (Authorization: Bearer <token>) de uma conta admin.
+def _user_from_entra_token(token):
+    """Valida um ID token do Entra ID e devolve o usuário, ou None se for inválido."""
+    if not SSO_ENABLED:
+        return None
+    try:
+        signing_key = _get_jwks_client().get_signing_key_from_jwt(token).key
+        claims = jwt.decode(
+            token,
+            signing_key,
+            algorithms=["RS256"],
+            audience=AZURE_CLIENT_ID,
+            issuer=f"https://login.microsoftonline.com/{AZURE_TENANT_ID}/v2.0",
+            options={"require": ["exp", "iat", "aud", "iss"]},
+        )
+    except jwt.PyJWTError:
+        return None
+    email = (claims.get("preferred_username") or claims.get("email") or "").strip()
+    if not email:
+        return None
+    return {
+        "email": email,
+        "name": (claims.get("name") or email).strip(),
+        "role": "admin" if email.lower() in ADMIN_EMAILS else "user",
+        "source": "sso",
+    }
 
-    O token é emitido pelo servidor só após login/registro com senha correta,
-    então não pode ser forjado por quem não conhece a senha da conta admin.
+
+def _get_current_user():
+    """Usuário da requisição: conta com senha, conta Microsoft ou demonstração."""
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return DEMO_USER if DEMO_AUTH else None
+    account = _get_authenticated_account()
+    if account:
+        return {"email": account.username, "name": account.username, "role": account.role, "source": "password"}
+    return _user_from_entra_token(auth_header[len("Bearer "):])
+
+
+def login_required(view_fn):
+    """Exige um usuário autenticado; ele fica disponível em g.user."""
+    @wraps(view_fn)
+    def wrapper(*args, **kwargs):
+        user = _get_current_user()
+        if not user:
+            return jsonify({"error": "Sessão expirada ou inválida. Entre novamente."}), 401
+        g.user = user
+        return view_fn(*args, **kwargs)
+    return wrapper
+
+
+def admin_required(view_fn):
+    """Exige um token válido (Authorization: Bearer <token>) de um admin.
+
+    Vale o token emitido pelo servidor após login com senha (conta admin) ou o
+    token da Microsoft de um e-mail listado em ADMIN_EMAILS.
     """
     @wraps(view_fn)
     def wrapper(*args, **kwargs):
-        account = _get_authenticated_account()
-        if not account or account.role != "admin":
+        user = _get_current_user()
+        if not user or user["role"] != "admin":
             return jsonify({"error": "Apenas administradores podem realizar esta ação."}), 403
+        g.user = user
         return view_fn(*args, **kwargs)
     return wrapper
+
+
+def _can_change_entry(entry):
+    """Admin altera qualquer lançamento; os demais, só os que criaram."""
+    if g.user["role"] == "admin":
+        return True
+    return bool(entry.created_by) and entry.created_by.lower() == g.user["email"].lower()
 
 
 @app.post("/api/auth/register")
@@ -589,15 +680,40 @@ def admin_reset_password(username):
 # --- Página principal ---
 @app.get("/")
 def index():
-    if not HTML_FILE.exists():
-        return "Arquivo HTML não encontrado.", 404
-    return send_file(HTML_FILE, mimetype="text/html")
+    if (DIST_DIR / "index.html").is_file():
+        return send_from_directory(DIST_DIR, "index.html")
+    if HTML_FILE.exists():
+        return send_file(HTML_FILE, mimetype="text/html")
+    return "Frontend não encontrado. Rode \"npm run build\" para gerar a pasta dist/.", 404
+
+
+# Arquivos do build do React: assets/, favicon.svg e auth/callback/ (página-ponte do SSO).
+# Uma pasta com index.html é servida no próprio endereço (ex.: /auth/callback).
+@app.get("/<path:filename>")
+def frontend_file(filename):
+    if filename.startswith("api/"):
+        abort(404)
+    if (DIST_DIR / filename / "index.html").is_file():
+        filename = filename.rstrip("/") + "/index.html"
+    if not (DIST_DIR / filename).is_file():
+        abort(404)
+    return send_from_directory(DIST_DIR, filename)
 
 
 # --- API: estado completo (usado ao carregar a página) ---
 @app.get("/api/data")
+@login_required
 def get_data():
+    # Quem entra pelo SSO passa a constar como colaborador.
+    name = g.user["name"]
+    if g.user["source"] == "sso" and not Collaborator.query.filter(
+        db.func.lower(Collaborator.name) == name.lower()
+    ).first():
+        db.session.add(Collaborator(id=str(uuid.uuid4()), name=name))
+        db.session.commit()
+    me = {"email": g.user["email"], "name": name, "role": g.user["role"]}
     return jsonify({
+        "me": me,
         "entries": [e.to_dict() for e in Entry.query.order_by(Entry.created_at.desc()).all()],
         "activities": [a.to_dict() for a in Activity.query.all()],
         "costCenters": [c.to_dict() for c in CostCenter.query.all()],
@@ -607,17 +723,26 @@ def get_data():
 
 # --- API: apontamentos (entries) ---
 @app.post("/api/entries")
+@login_required
 def create_entry():
     body = request.get_json(force=True)
+    try:
+        hours = float(body["hours"])
+        colab, date, activity_id = body["colab"], body["date"], body["activityId"]
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "Preencha colaborador, data, atividade e horas."}), 400
+    if not colab or not date or not activity_id or hours <= 0:
+        return jsonify({"error": "Preencha colaborador, data, atividade e horas."}), 400
     entry = Entry(
         id=body.get("id") or str(uuid.uuid4()),
-        colab=body["colab"],
-        date=body["date"],
-        activity_id=body["activityId"],
+        colab=colab,
+        date=date,
+        activity_id=activity_id,
         cost_center_id=body.get("costCenterId") or None,
         details=body.get("details") or "",
-        hours=float(body["hours"]),
-        created_by=body.get("createdBy") or None,
+        hours=hours,
+        # O autor vem do token, nunca do corpo da requisição.
+        created_by=g.user["email"],
     )
     db.session.add(entry)
     db.session.commit()
@@ -625,8 +750,11 @@ def create_entry():
 
 
 @app.put("/api/entries/<entry_id>")
+@login_required
 def update_entry(entry_id):
     entry = Entry.query.get_or_404(entry_id)
+    if not _can_change_entry(entry):
+        return jsonify({"error": "Você só pode alterar os seus lançamentos."}), 403
     body = request.get_json(force=True)
     if "costCenterId" in body:
         entry.cost_center_id = body["costCenterId"] or None
@@ -637,8 +765,11 @@ def update_entry(entry_id):
 
 
 @app.delete("/api/entries/<entry_id>")
+@login_required
 def delete_entry(entry_id):
     entry = Entry.query.get_or_404(entry_id)
+    if not _can_change_entry(entry):
+        return jsonify({"error": "Você só pode excluir os seus lançamentos."}), 403
     db.session.delete(entry)
     db.session.commit()
     return "", 204

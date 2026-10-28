@@ -1,0 +1,15 @@
+/* FPFtech Design System — ponto de entrada global.
+   Ordem de importação: fontes → tokens → base → componentes. */
+
+@import './fonts.css';
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './base.css';
+@import './components/button.css';
+@import './components/forms.css';
+@import './components/feedback.css';
+@import './components/card.css';
+@import './components/navigation.css';
+@import './components/modal.css';
+@import './components/table.css';

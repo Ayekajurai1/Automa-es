@@ -1,0 +1,307 @@
+/* Chronos — layout e componentes da aplicação.
+   Estas classes substituem os estilos inline do HTML original. */
+
+/* ── Cores dos gráficos (mudam no modo escuro) ───────────────────────── */
+:root {
+  --chart-core: var(--color-interactive-primary-default);
+  --chart-admin: var(--color-content-primary);
+  --chart-other: var(--color-content-tertiary);
+  --chart-track: var(--color-surface-sunken);
+}
+.dark {
+  --chart-admin: #4a6383;
+  --chart-other: #33404f;
+  --chart-track: rgba(255, 255, 255, 0.08);
+}
+.fill--core { background: var(--chart-core); }
+.fill--admin { background: var(--chart-admin); }
+.fill--other { background: var(--chart-other); }
+.track { background: var(--chart-track); }
+
+/* ── Estrutura geral ─────────────────────────────────────────────────── */
+body { margin: 0; }
+.app {
+  min-height: 100vh;
+  background: transparent;
+  font-family: var(--font-family-sans, 'DM Sans', sans-serif);
+  color: var(--color-content-primary);
+}
+.shell { display: flex; flex-direction: column; min-height: 100vh; }
+.content { display: flex; flex-direction: column; min-width: 0; }
+.page { padding: 24px; background: transparent; display: flex; flex-direction: column; gap: 20px; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+
+.grid-auto { display: grid; gap: 20px; align-items: start; }
+.grid-auto--220 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); align-items: stretch; }
+.grid-auto--320 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.grid-auto--340 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.grid-auto--380 { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
+.grid-auto--430 { grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); }
+
+/* ── Marca ───────────────────────────────────────────────────────────── */
+.brand { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.brand--lg { font-size: 24px; }
+.brand__accent { color: var(--color-interactive-primary-default); }
+
+/* ── Login ───────────────────────────────────────────────────────────── */
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px; }
+.login__tagline { margin: 8px 0 0; font-size: 14px; color: var(--color-content-secondary); }
+.login__actions { display: flex; flex-direction: column; gap: 10px; }
+.ui-button.login__sso {
+  gap: 10px;
+  border-width: 1px;
+  border-color: var(--color-border-default);
+  color: var(--color-content-primary);
+}
+.login__hint { margin: 0; font-size: 12px; text-align: center; color: var(--color-content-tertiary); }
+
+/* ── Barra superior ──────────────────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--color-surface-default);
+  border-bottom: 1px solid var(--color-border-default);
+}
+.topbar__inner { display: flex; align-items: center; gap: 24px; padding: 12px 24px; flex-wrap: wrap; }
+.topbar__brand { display: flex; align-items: baseline; gap: 10px; }
+.topbar__org { font-size: 12px; color: var(--color-content-tertiary); }
+.topbar__nav { margin-right: auto; flex-wrap: wrap; }
+.topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 16px;
+  border-left: 1px solid var(--color-border-default);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  color: var(--color-content-secondary);
+}
+.ui-nav .tab.ui-nav__item--active {
+  background: var(--color-interactive-primary-default-value);
+  color: var(--color-interactive-primary-on-value);
+}
+.tab__icon { width: 17px; height: 17px; flex-shrink: 0; }
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-content-secondary);
+  cursor: pointer;
+}
+
+.user-info { line-height: 1.25; text-align: right; }
+.user-info__name { font-size: 14px; font-weight: 600; }
+.user-info__role { font-size: 12px; color: var(--color-content-tertiary); }
+
+/* ── Cabeçalho da página ─────────────────────────────────────────────── */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: transparent;
+  flex-wrap: wrap;
+}
+.page-header__titles { margin-right: auto; }
+.page-header__title { margin: 0; font-size: 20px; font-weight: 700; }
+.page-header__subtitle { font-size: 13px; color: var(--color-content-secondary); }
+
+/* ── Painéis e títulos de seção ──────────────────────────────────────── */
+.panel { padding: 20px; }
+.panel__title { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.panel__title--spaced { margin-bottom: 12px; }
+.panel__desc { margin: 0 0 16px; font-size: 13px; color: var(--color-content-secondary); }
+
+.section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.section-head__title { margin: 0; font-size: 16px; font-weight: 600; }
+.section-head__meta { font-size: 12px; color: var(--color-content-tertiary); }
+
+/* ── Formulários ─────────────────────────────────────────────────────── */
+.form-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.form-grid-manual { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 14px; }
+.form-stack { display: flex; flex-direction: column; gap: 14px; }
+.form-span-all { grid-column: 1 / -1; }
+.form-align-end { display: flex; align-items: flex-end; }
+
+.inline-form { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 16px; }
+.inline-form__field { flex: 1; }
+
+/* Botão com a mesma altura dos campos (40px) */
+.ui-button.btn-field { height: 40px; }
+
+/* ── Apontamento: cards rápidos ──────────────────────────────────────── */
+.quick-stat { padding: 20px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.quick-stat__value { font-size: 30px; font-weight: 700; margin-top: 8px; color: var(--color-interactive-primary-default); }
+.quick-stat__meta { font-size: 12px; color: var(--color-content-secondary); margin-top: 4px; }
+
+/* ── Apontamento: cronômetro ─────────────────────────────────────────── */
+.timer-card { padding: 24px; }
+.timer-card__status { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.timer-card__display { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
+.timer-card__actions { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.timer-card__divider { height: 1px; background: var(--color-border-default); margin: 22px 0 18px; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--color-content-tertiary); }
+.status-dot--running { background: var(--color-status-success-solid); }
+.status-dot--paused { background: var(--color-status-warning-solid); }
+
+/* ── Apontamento: cronômetros pausados ───────────────────────────────── */
+.paused-list { display: flex; flex-direction: column; gap: 8px; }
+.paused-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--color-surface-sunken);
+}
+.paused-row__elapsed { font-size: 16px; font-weight: 700; min-width: 96px; }
+.paused-row__info { font-size: 13px; color: var(--color-content-secondary); margin-right: auto; }
+
+/* ── Tabelas ─────────────────────────────────────────────────────────── */
+.table-surface { background: var(--color-surface-default); }
+.ui-table__cell.col-80 { width: 80px; }
+.ui-table__cell.col-90 { width: 90px; }
+.ui-table__cell.col-110 { width: 110px; }
+.ui-table__cell.col-150 { width: 150px; }
+.ui-table__cell.cell-right { text-align: right; }
+.ui-table__cell.cell-strong { color: var(--color-content-primary); font-weight: 500; }
+.ui-table__cell.cell-details { max-width: 260px; }
+.ui-table__cell.cell-total { text-align: right; font-weight: 700; color: var(--color-content-primary); }
+
+.empty-state { padding: 32px; text-align: center; font-size: 13px; color: var(--color-content-tertiary); }
+
+/* ── Listas de cadastro ──────────────────────────────────────────────── */
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: 1px solid var(--color-border-default);
+}
+.list-row__name { font-size: 14px; margin-right: auto; }
+.list-row__meta { font-size: 13px; color: var(--color-content-secondary); }
+
+/* ── Dashboard: filtros ──────────────────────────────────────────────── */
+.filters {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+.filters__actions { display: flex; gap: 8px; }
+.ui-button.filters__button { height: 40px; flex: 1; gap: 8px; }
+
+/* ── Dashboard: KPIs ─────────────────────────────────────────────────── */
+.kpi { padding: 20px; }
+.kpi__value {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.15;
+  margin-top: 10px;
+  color: var(--color-content-primary);
+}
+.kpi__value--name { font-size: 22px; }
+.kpi__value--text { font-size: 18px; }
+.kpi__value--accent { color: var(--color-interactive-primary-default); }
+.kpi__meta { font-size: 12px; color: var(--color-content-secondary); margin-top: 6px; }
+
+/* ── Dashboard: cards de gráfico ─────────────────────────────────────── */
+.chart-card { padding: 20px 22px 24px; }
+.chart-card__title { font-size: 16px; font-weight: 600; }
+.chart-card__desc { margin: 2px 0 18px; font-size: 13px; color: var(--color-content-secondary); }
+.chart-card__desc--tight { margin-bottom: 14px; }
+.chart-card__desc--loose { margin-bottom: 20px; }
+
+/* Barras horizontais (distribuição por atividade) */
+.hbars { display: flex; flex-direction: column; gap: 12px; }
+.hbar { display: grid; grid-template-columns: 190px minmax(0, 1fr) 68px; align-items: center; gap: 14px; }
+.hbar__label { font-size: 13px; text-align: right; line-height: 1.2; color: var(--color-content-secondary); }
+.hbar__track { height: 12px; border-radius: 9999px; overflow: hidden; }
+.hbar__fill { height: 100%; border-radius: 9999px; }
+.hbar__value { font-size: 13px; font-weight: 600; }
+
+.legend {
+  display: flex;
+  gap: 18px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-default);
+  flex-wrap: wrap;
+}
+.legend__item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--color-content-secondary); }
+.legend__swatch { width: 10px; height: 10px; border-radius: 9999px; }
+
+/* Core vs. administrativo */
+.core-share__value { font-size: 48px; font-weight: 700; line-height: 1; color: var(--color-interactive-primary-default); }
+.core-share__meta { font-size: 12px; color: var(--color-content-secondary); margin: 8px 0 18px; }
+.stacked-bar { display: flex; height: 16px; border-radius: 9999px; overflow: hidden; }
+.type-rows { margin-top: 16px; }
+.type-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-top: 1px solid var(--color-border-default);
+  font-size: 13px;
+}
+.type-row__label { color: var(--color-content-secondary); }
+.type-row__value { font-weight: 600; }
+
+/* Ranking por colaborador */
+.rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border-default);
+}
+.rank-row__main { min-width: 0; }
+.rank-row__name { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 8px; }
+.rank-row__track { height: 8px; border-radius: 9999px; overflow: hidden; }
+.rank-row__fill { height: 100%; border-radius: 9999px; }
+.rank-row__value { text-align: right; font-size: 14px; font-weight: 600; }
+
+/* Evolução semanal */
+.week-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  height: 200px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+.week-chart__col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%; }
+.week-chart__total {
+  font-size: 11px;
+  text-align: center;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--color-content-secondary);
+}
+.week-chart__seg--top { border-radius: 6px 6px 0 0; }
+.week-chart__labels { display: flex; gap: 14px; margin-top: 8px; }
+.week-chart__label { flex: 1; font-size: 11px; text-align: center; color: var(--color-content-tertiary); }
+
+/* ── Toast ───────────────────────────────────────────────────────────── */
+.ui-alert.toast {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: 80;
+  max-width: 420px;
+  box-shadow: var(--shadow-popover, 0 18px 40px rgba(0, 0, 0, .18));
+  background: var(--color-surface-default);
+}

@@ -1,0 +1,14 @@
+/* Base resets & body defaults for the FPF design system */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-family-sans);
+  color: var(--color-content-primary-value);
+  background-color: var(--color-bg-base-value);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--color-link-default-value); text-decoration: underline; transition: opacity .2s; }
+a:hover { opacity: .8; }

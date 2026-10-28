@@ -1,0 +1,168 @@
+/* FPFtech Design System — Color tokens (light + dark)
+   Source: styles/_themes.scss + styles/_tailwind-theme.scss
+   Two layers: raw *-value cores, then semantic aliases consumers use. */
+
+:root {
+  /* Background */
+  --color-bg-base-value: #ffffff;
+  --color-bg-subtle-value: #f4f4f4;
+  --color-bg-muted-value: #eaeaea;
+  --color-bg-elevated-value: #ffffff;
+
+  /* Surface */
+  --color-surface-default-value: #ffffff;
+  --color-surface-raised-value: #ffffff;
+  --color-surface-sunken-value: #f4f4f4;
+
+  /* Border */
+  --color-border-default-value: #dfdede;
+  --color-border-focus-value: #b3c50e;
+
+  /* Content */
+  --color-content-primary-value: #383839;
+  --color-content-secondary-value: #4a4a4b;
+  --color-content-tertiary-value: #8c8c8c;
+
+  /* Interactive — Primary (FPF lime) */
+  --color-interactive-primary-default-value: #b3c50e;
+  --color-interactive-primary-hover-value: #8fa00b;
+  --color-interactive-primary-active-value: #7a8a09;
+  --color-interactive-primary-subtle-value: #eef3c0;
+  --color-interactive-primary-on-value: #383839;
+
+  /* Interactive — Secondary (graphite) */
+  --color-interactive-secondary-default-value: #383839;
+  --color-interactive-secondary-hover-value: #474647;
+  --color-interactive-secondary-on-value: #ffffff;
+
+  /* Interactive — Accent (green) */
+  --color-interactive-accent-default-value: #34ae53;
+  --color-interactive-accent-hover-value: #28924a;
+  --color-interactive-accent-subtle-value: rgba(52, 174, 83, 0.1);
+  --color-interactive-accent-on-value: #ffffff;
+
+  /* Link */
+  --color-link-default-value: #7a8a09;
+
+  /* Status — Success */
+  --color-status-success-solid-value: #34ae53;
+  --color-status-success-bg-value: rgba(52, 174, 83, 0.1);
+  --color-status-success-border-value: rgba(52, 174, 83, 0.3);
+  --color-status-success-content-value: #1e7a3a;
+
+  /* Status — Warning */
+  --color-status-warning-solid-value: #e5a020;
+  --color-status-warning-bg-value: rgba(229, 160, 32, 0.1);
+  --color-status-warning-border-value: rgba(229, 160, 32, 0.3);
+  --color-status-warning-content-value: #c8860a;
+
+  /* Status — Danger */
+  --color-status-danger-solid-value: #d94040;
+  --color-status-danger-bg-value: rgba(217, 64, 64, 0.1);
+  --color-status-danger-border-value: rgba(217, 64, 64, 0.25);
+  --color-status-danger-content-value: #b83535;
+
+  /* Status — Info */
+  --color-status-info-solid-value: #2d8fd4;
+  --color-status-info-bg-value: rgba(45, 143, 212, 0.1);
+  --color-status-info-border-value: rgba(45, 143, 212, 0.25);
+  --color-status-info-content-value: #1666a0;
+
+  /* ── Semantic aliases (public API — @theme mapping) ── */
+  --color-bg-base: var(--color-bg-base-value);
+  --color-bg-subtle: var(--color-bg-subtle-value);
+  --color-bg-muted: var(--color-bg-muted-value);
+  --color-bg-elevated: var(--color-bg-elevated-value);
+  --color-surface-default: var(--color-surface-default-value);
+  --color-surface-raised: var(--color-surface-raised-value);
+  --color-surface-sunken: var(--color-surface-sunken-value);
+  --color-border-default: var(--color-border-default-value);
+  --color-border-focus: var(--color-border-focus-value);
+  --color-content-primary: var(--color-content-primary-value);
+  --color-content-secondary: var(--color-content-secondary-value);
+  --color-content-tertiary: var(--color-content-tertiary-value);
+  --color-interactive-primary-default: var(--color-interactive-primary-default-value);
+  --color-interactive-primary-hover: var(--color-interactive-primary-hover-value);
+  --color-interactive-primary-active: var(--color-interactive-primary-active-value);
+  --color-interactive-primary-subtle: var(--color-interactive-primary-subtle-value);
+  --color-interactive-primary-on: var(--color-interactive-primary-on-value);
+  --color-interactive-secondary-default: var(--color-interactive-secondary-default-value);
+  --color-interactive-secondary-hover: var(--color-interactive-secondary-hover-value);
+  --color-interactive-secondary-on: var(--color-interactive-secondary-on-value);
+  --color-interactive-accent-default: var(--color-interactive-accent-default-value);
+  --color-interactive-accent-hover: var(--color-interactive-accent-hover-value);
+  --color-interactive-accent-subtle: var(--color-interactive-accent-subtle-value);
+  --color-interactive-accent-on: var(--color-interactive-accent-on-value);
+  --color-link-default: var(--color-link-default-value);
+  --color-status-success-solid: var(--color-status-success-solid-value);
+  --color-status-success-bg: var(--color-status-success-bg-value);
+  --color-status-success-border: var(--color-status-success-border-value);
+  --color-status-success-content: var(--color-status-success-content-value);
+  --color-status-warning-solid: var(--color-status-warning-solid-value);
+  --color-status-warning-bg: var(--color-status-warning-bg-value);
+  --color-status-warning-border: var(--color-status-warning-border-value);
+  --color-status-warning-content: var(--color-status-warning-content-value);
+  --color-status-danger-solid: var(--color-status-danger-solid-value);
+  --color-status-danger-bg: var(--color-status-danger-bg-value);
+  --color-status-danger-border: var(--color-status-danger-border-value);
+  --color-status-danger-content: var(--color-status-danger-content-value);
+  --color-status-info-solid: var(--color-status-info-solid-value);
+  --color-status-info-bg: var(--color-status-info-bg-value);
+  --color-status-info-border: var(--color-status-info-border-value);
+  --color-status-info-content: var(--color-status-info-content-value);
+}
+
+.dark {
+  --color-bg-base-value: #222223;
+  --color-bg-subtle-value: #383839;
+  --color-bg-muted-value: rgba(255, 255, 255, 0.05);
+  --color-bg-elevated-value: #383839;
+
+  --color-surface-default-value: #1e1e1f;
+  --color-surface-raised-value: #2a2a2b;
+  --color-surface-sunken-value: rgba(0, 0, 0, 0.2);
+
+  --color-border-default-value: rgba(255, 255, 255, 0.1);
+  --color-border-focus-value: #b3c50e;
+
+  --color-content-primary-value: rgba(255, 255, 255, 0.95);
+  --color-content-secondary-value: rgba(255, 255, 255, 0.65);
+  --color-content-tertiary-value: rgba(255, 255, 255, 0.4);
+
+  --color-interactive-primary-default-value: #b3c50e;
+  --color-interactive-primary-hover-value: #c4d218;
+  --color-interactive-primary-active-value: #d4e038;
+  --color-interactive-primary-subtle-value: rgba(179, 197, 14, 0.15);
+  --color-interactive-primary-on-value: #222223;
+
+  --color-interactive-secondary-default-value: rgba(255, 255, 255, 0.12);
+  --color-interactive-secondary-hover-value: rgba(255, 255, 255, 0.18);
+  --color-interactive-secondary-on-value: rgba(255, 255, 255, 0.95);
+
+  --color-interactive-accent-default-value: #50c96c;
+  --color-interactive-accent-hover-value: #34ae53;
+  --color-interactive-accent-subtle-value: rgba(52, 174, 83, 0.15);
+  --color-interactive-accent-on-value: #222223;
+
+  --color-link-default-value: #c4d218;
+
+  --color-status-success-solid-value: #34ae53;
+  --color-status-success-bg-value: rgba(52, 174, 83, 0.15);
+  --color-status-success-border-value: rgba(52, 174, 83, 0.3);
+  --color-status-success-content-value: #50c96c;
+
+  --color-status-warning-solid-value: #e5a020;
+  --color-status-warning-bg-value: rgba(229, 160, 32, 0.15);
+  --color-status-warning-border-value: rgba(229, 160, 32, 0.3);
+  --color-status-warning-content-value: #ffba42;
+
+  --color-status-danger-solid-value: #d94040;
+  --color-status-danger-bg-value: rgba(217, 64, 64, 0.15);
+  --color-status-danger-border-value: rgba(217, 64, 64, 0.3);
+  --color-status-danger-content-value: #e85555;
+
+  --color-status-info-solid-value: #2d8fd4;
+  --color-status-info-bg-value: rgba(45, 143, 212, 0.15);
+  --color-status-info-border-value: rgba(45, 143, 212, 0.3);
+  --color-status-info-content-value: #52aaea;
+}

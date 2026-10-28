@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chronos · Entrando…</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+        color: #4a4a4b;
+        background: linear-gradient(160deg, #dbe7f5 0%, #c3d8ee 45%, #cfe0ee 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      Página-ponte do login Microsoft (exigida pelo MSAL v5).
+      Recebe a resposta da Microsoft e devolve para o Chronos.
+      Não coloque o app nem o MsalProvider aqui.
+    -->
+    <p>Concluindo o login…</p>
+    <script type="module">
+      import { broadcastResponseToMainFrame } from '@azure/msal-browser/redirect-bridge';
+
+      broadcastResponseToMainFrame().catch((error) => {
+        console.error('Erro ao repassar a resposta do login:', error);
+      });
+    </script>
+  </body>
+</html>

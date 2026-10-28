@@ -1,0 +1,58 @@
+/* Chronos — tema da aplicação.
+   Sobrescreve o design system FPFtech: troca o lime pelo azul do Chronos,
+   ajusta as superfícies do modo escuro e define utilitários usados nas telas. */
+
+html, body { background: linear-gradient(160deg, #dbe7f5 0%, #c3d8ee 45%, #cfe0ee 100%); background-attachment: fixed; color: var(--color-content-primary); }
+body.dark { background: linear-gradient(160deg, #0d1626 0%, #13203a 45%, #0a1120 100%); }
+a { color: var(--color-link-default); }
+a:hover { color: var(--color-interactive-primary-active); }
+.dark {
+  --color-border-default: var(--color-border-default-value);
+  --color-content-primary: var(--color-content-primary-value);
+  --color-content-secondary: var(--color-content-secondary-value);
+  --color-content-tertiary: var(--color-content-tertiary-value);
+  --color-interactive-primary-active: var(--color-interactive-primary-active-value);
+  --color-interactive-primary-default: var(--color-interactive-primary-default-value);
+  --color-interactive-primary-subtle: var(--color-interactive-primary-subtle-value);
+  --color-link-default: var(--color-link-default-value);
+  --color-status-success-solid: var(--color-status-success-solid-value);
+  --color-status-warning-solid: var(--color-status-warning-solid-value);
+  --color-surface-default: var(--color-surface-default-value);
+  --color-surface-sunken: var(--color-surface-sunken-value);
+  color: var(--color-content-primary-value);
+}
+.dark .ui-nav__item:hover { background-color: var(--color-interactive-primary-subtle-value); }
+.dark {
+  --color-surface-default-value: #4a4e55;
+  --color-surface-default: #4a4e55;
+  --color-surface-sunken-value: #3c4046;
+  --color-surface-sunken: #3c4046;
+  --color-bg-elevated-value: #43474d;
+  --color-bg-default-value: #43474d;
+  --color-border-default-value: rgba(255,255,255,0.12);
+  --color-border-default: rgba(255,255,255,0.12);
+}
+.dark header, .dark nav, .dark .ui-sidebar, .dark .ui-nav { background: #43474d !important; }
+.dark .ui-card, .dark .ui-table-wrapper { background: #4a4e55 !important; }
+.dark .ui-input, .dark .ui-select, .dark .ui-textarea { background-color: #3c4046; }
+.dark .ui-table__header { background: #43474d; }
+:root, .dark {
+  --color-interactive-primary-default-value: #5b8fc7;
+  --color-interactive-primary-hover-value: #4a7cb2;
+  --color-interactive-primary-active-value: #3d6b9d;
+  --color-interactive-primary-subtle-value: #dbe7f5;
+  --color-interactive-primary-on-value: #ffffff;
+  --color-link-default-value: #3d6b9d;
+}
+.dark {
+  --color-interactive-primary-default-value: #7fb0e0;
+  --color-interactive-primary-hover-value: #97c1e9;
+  --color-interactive-primary-active-value: #b0d1f1;
+  --color-interactive-primary-subtle-value: rgba(127, 176, 224, 0.18);
+  --color-interactive-primary-on-value: #0d1626;
+  --color-link-default-value: #97c1e9;
+}
+.num { font-variant-numeric: tabular-nums; }
+.ui-input, .ui-select { height: 40px; }
+.ui-label { font-size: 13px; margin-bottom: 6px; }
+.meta-label { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-content-tertiary); font-weight: 600; }

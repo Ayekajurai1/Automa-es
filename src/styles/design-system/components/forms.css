@@ -1,0 +1,182 @@
+/* Forms — from _input.scss, _form.scss */
+
+/* Input */
+.ui-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-default-value);
+  font-size: 14px;
+  font-family: inherit;
+  transition: box-shadow .2s, border-color .2s;
+  background-color: var(--color-surface-default-value);
+  color: var(--color-content-primary-value);
+}
+.ui-input::placeholder { color: var(--color-content-tertiary-value); }
+.ui-input:focus {
+  outline: none;
+  border-color: var(--color-border-focus-value);
+  box-shadow: 0 0 0 2px var(--color-interactive-primary-subtle-value);
+}
+.ui-input:disabled { opacity: .5; cursor: not-allowed; background-color: var(--color-surface-sunken-value); }
+.ui-input--error { border-color: var(--color-status-danger-border-value); }
+.ui-input--error:focus { box-shadow: 0 0 0 2px var(--color-status-danger-bg-value); }
+.ui-input--success { border-color: var(--color-status-success-border-value); }
+.ui-input--success:focus { box-shadow: 0 0 0 2px var(--color-status-success-bg-value); }
+
+/* Textarea */
+.ui-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-default-value);
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: box-shadow .2s, border-color .2s;
+  background-color: var(--color-surface-default-value);
+  color: var(--color-content-primary-value);
+}
+.ui-textarea::placeholder { color: var(--color-content-tertiary-value); }
+.ui-textarea:focus {
+  outline: none;
+  border-color: var(--color-border-focus-value);
+  box-shadow: 0 0 0 2px var(--color-interactive-primary-subtle-value);
+}
+
+/* Select */
+.ui-select {
+  width: 100%;
+  height: 48px;
+  padding: 0 44px 0 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border-default-value);
+  font-size: 14px;
+  font-family: inherit;
+  appearance: none;
+  background-color: var(--color-surface-default-value);
+  color: var(--color-content-primary-value);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238C8C8C'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  transition: box-shadow .2s, border-color .2s;
+  cursor: pointer;
+}
+.ui-select:hover { background-color: var(--color-interactive-primary-subtle-value); border-color: var(--color-interactive-primary-default-value); }
+.ui-select:focus, .ui-select:focus-visible {
+  outline: none;
+  background-color: var(--color-surface-default-value);
+  border-color: var(--color-border-focus-value);
+  box-shadow: 0 0 0 2px var(--color-interactive-primary-subtle-value);
+}
+
+/* Checkbox & Radio */
+.ui-checkbox, .ui-radio {
+  width: 16px; height: 16px;
+  cursor: pointer;
+  transition: background-color .2s;
+  background-color: var(--color-surface-default-value);
+  border: 1px solid var(--color-border-default-value);
+  appearance: none;
+  position: relative;
+}
+.ui-checkbox { border-radius: 4px; }
+.ui-radio { border-radius: 9999px; }
+.ui-checkbox:checked, .ui-radio:checked {
+  background-color: var(--color-interactive-primary-default-value);
+  border-color: var(--color-interactive-primary-default-value);
+}
+.ui-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 1px;
+  width: 5px; height: 9px;
+  border: solid var(--color-interactive-primary-on-value);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.ui-radio:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 4px;
+  width: 6px; height: 6px;
+  border-radius: 9999px;
+  background: var(--color-interactive-primary-on-value);
+}
+.ui-checkbox:focus-visible, .ui-radio:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-border-focus-value); }
+.ui-checkbox:disabled, .ui-radio:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Native-checkbox Switch (input[type=checkbox].ui-switch) */
+.ui-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 40px; height: 24px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color .2s;
+  background-color: var(--color-surface-sunken-value);
+  border: 1px solid var(--color-border-default-value);
+  appearance: none;
+}
+.ui-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 9999px;
+  transition: transform .2s;
+  background-color: var(--color-content-primary-value);
+}
+.ui-switch:checked { background-color: var(--color-interactive-primary-default-value); }
+.ui-switch:checked::after { transform: translateX(100%); background-color: var(--color-interactive-primary-on-value); }
+.ui-switch:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-border-focus-value); }
+.ui-switch:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Password input wrapper */
+.ui-password-input { position: relative; }
+.ui-password-input__field { width: 100%; padding-right: 48px; }
+.ui-password-input__toggle {
+  position: absolute;
+  right: 16px; top: 50%;
+  transform: translateY(-50%);
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color .2s;
+  color: var(--color-content-tertiary-value);
+  display: inline-flex;
+}
+.ui-password-input__toggle:hover { color: var(--color-content-primary-value); }
+.ui-password-input__toggle-icon { width: 20px; height: 20px; }
+
+/* Form container */
+.ui-form { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+.ui-form__field { display: flex; flex-direction: column; gap: 8px; }
+.ui-form--compact { gap: 8px; }
+.ui-form--wide { max-width: 42rem; }
+.ui-form--inline { flex-direction: row; align-items: flex-end; flex-wrap: wrap; }
+
+.ui-label {
+  display: block;
+  font-size: 14px; font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--color-content-primary-value);
+}
+.ui-label--required::after { content: ' *'; color: var(--color-status-danger-solid-value); }
+
+.ui-helper-text { font-size: 12px; margin-top: 4px; color: var(--color-content-secondary-value); }
+
+.ui-error-message {
+  font-size: 12px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-status-danger-content-value);
+}
+.ui-error-message::before { content: '⚠'; font-size: 12px; }
